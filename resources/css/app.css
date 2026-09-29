@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Segoe UI', ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+
+    /* Atölye altın tonları */
+    --color-gold-50: #fbf8ef;
+    --color-gold-100: #f4ecd2;
+    --color-gold-200: #e9d7a3;
+    --color-gold-300: #dcbd6d;
+    --color-gold-400: #d0a546;
+    --color-gold-500: #b98a2e;
+    --color-gold-600: #9c6f24;
+    --color-gold-700: #7d5520;
+    --color-gold-800: #684620;
+    --color-gold-900: #583b1f;
+}
