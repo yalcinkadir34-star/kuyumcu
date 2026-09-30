@@ -16,12 +16,15 @@ use Illuminate\Support\Facades\DB;
 /**
  * Atölye iş emri (fason işçilik fişi).
  *
- * Giriş: has karşılığı firmanın carisine ALACAK yazılır (firmaya has borçlanırız).
+ * purity: ürünün ayar milyemi (ör. 0,585). labor_purity_in: giriş işçiliği milyemi (ör. 0,010).
+ *
+ * Giriş: gram × (ayar + giriş işçiliği) has, firmanın carisine ALACAK yazılır
+ *        (ör. 26,25 × 0,595 = 15,619 → firmaya has borçlanırız).
  * Çıkışlar (bir veya birden fazla): bkz. WorkOrderDelivery.
- * Giriş − çıkışlar = atölyede kalan. Fire cariye işlenmez; fiş kapatılınca
+ * Giriş − çıkışlar = atölyede kalan (gram). Fire cariye işlenmez; fiş kapatılınca
  * kalan miktar fire olarak raporlanır.
  */
-#[Fillable(['account_id', 'product', 'received_at', 'gross_in', 'purity', 'notes'])]
+#[Fillable(['account_id', 'product', 'received_at', 'gross_in', 'purity', 'labor_purity_in', 'notes'])]
 class WorkOrder extends Model
 {
     public const STATUS_ATOLYEDE = 'atolyede';
@@ -35,6 +38,7 @@ class WorkOrder extends Model
             'closed_at' => 'date',
             'gross_in' => 'decimal:3',
             'purity' => 'decimal:4',
+            'labor_purity_in' => 'decimal:4',
             'has_in' => 'decimal:3',
         ];
     }
@@ -46,7 +50,8 @@ class WorkOrder extends Model
         });
 
         static::saving(function (WorkOrder $order) {
-            $order->has_in = Amount::fromMilli(Workshop::hasMilli(Amount::toMilli($order->gross_in), $order->purity));
+            $order->labor_purity_in ??= '0.0000';
+            $order->has_in = Amount::fromMilli(Workshop::hasMilli(Amount::toMilli($order->gross_in), $order->inPurity()));
         });
 
         // Fiş silinince giriş kaydı ve çıkışlar (kendi cari kayıtlarıyla) silinir
@@ -71,10 +76,7 @@ class WorkOrder extends Model
     /** Bu cari hareketi bir atölye fişinden otomatik oluşturulduysa o fiş. */
     public static function linkedTo(Transaction $transaction): ?self
     {
-        $delivery = WorkOrderDelivery::query()
-            ->where('out_transaction_id', $transaction->id)
-            ->orWhere('labor_transaction_id', $transaction->id)
-            ->first();
+        $delivery = WorkOrderDelivery::firstWhere('out_transaction_id', $transaction->id);
 
         return $delivery?->workOrder ?? static::firstWhere('in_transaction_id', $transaction->id);
     }
@@ -107,6 +109,12 @@ class WorkOrder extends Model
             ->withCount('deliveries');
     }
 
+    /** Giriş hesap milyemi: ayar + giriş işçiliği (ör. 0,585 + 0,010 = 0,595). */
+    public function inPurity(): string
+    {
+        return Workshop::addPurity($this->purity, $this->labor_purity_in);
+    }
+
     public function isClosed(): bool
     {
         return $this->status === self::STATUS_TAMAMLANDI;
@@ -133,6 +141,7 @@ class WorkOrder extends Model
         return Amount::toMilli($this->gross_in) - $this->deliveredMilli();
     }
 
+    /** Atölyede kalan gramın saf altın karşılığı (ayar milyemiyle, işçiliksiz). */
     public function remainingHasMilli(): int
     {
         return Workshop::hasMilli($this->remainingMilli(), $this->purity);
@@ -160,7 +169,7 @@ class WorkOrder extends Model
                 $this->received_at,
                 $this->account_id,
                 $this->number,
-                "Atölye girişi: {$this->product} ({$grams} × ".Workshop::formatPurity($this->purity).')',
+                "Atölye girişi: {$this->product} ({$grams} × ".Workshop::formatPurity($this->inPurity()).')',
                 $user?->id ?? $this->created_by,
             );
             $this->saveQuietly();

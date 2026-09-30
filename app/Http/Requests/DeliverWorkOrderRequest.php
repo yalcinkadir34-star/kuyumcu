@@ -5,11 +5,11 @@ namespace App\Http\Requests;
 use App\Models\Currency;
 use App\Models\WorkOrder;
 use App\Support\Amount;
+use App\Support\Workshop;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
-/** Atölyeden çıkış: tartıdaki gram ve işçilik. Bir fişin birden fazla çıkışı olabilir. */
+/** Atölyeden çıkış: tartıdaki gram ve çıkış işçiliği (milyem). Bir fişin birden fazla çıkışı olabilir. */
 class DeliverWorkOrderRequest extends FormRequest
 {
     public function authorize(): bool
@@ -36,21 +36,9 @@ class DeliverWorkOrderRequest extends FormRequest
                     $fail("Çıkış, atölyede kalan miktardan ({$kalan}) fazla olamaz.");
                 }
             }],
-            'labor_basis' => ['required', Rule::in(['gram', 'toplam'])],
-            'labor_currency_id' => ['required', Rule::exists('currencies', 'id')->where('is_active', true)],
-            'labor_rate' => ['required', function (string $attribute, mixed $value, Closure $fail) {
-                $parsed = Amount::parse((string) $value);
-
-                if ($parsed === null) {
-                    $fail('İşçilik tutarı geçersiz. İşçilik yoksa 0 yazın.');
-
-                    return;
-                }
-
-                // Toplam tutar girildiyse birimin ondalık sınırına uymalı
-                $currency = Currency::find($this->input('labor_currency_id'));
-                if ($this->input('labor_basis') === 'toplam' && $currency && Amount::decimalsOf($parsed) > $currency->decimals) {
-                    $fail("{$currency->name} için en fazla {$currency->decimals} ondalık basamak girilebilir.");
+            'labor_purity' => ['nullable', function (string $attribute, mixed $value, Closure $fail) {
+                if (Workshop::parseLaborPurity((string) $value) === null) {
+                    $fail('Çıkış işçiliği geçersiz. Örnek: 0,040 (en fazla 0,200)');
                 }
             }],
             'notes' => ['nullable', 'string', 'max:255'],
@@ -62,9 +50,7 @@ class DeliverWorkOrderRequest extends FormRequest
         return [
             'delivered_at' => 'çıkış tarihi',
             'gross_out' => 'çıkış gramı',
-            'labor_basis' => 'işçilik tipi',
-            'labor_currency_id' => 'işçilik birimi',
-            'labor_rate' => 'işçilik',
+            'labor_purity' => 'çıkış işçiliği',
             'notes' => 'not',
         ];
     }
@@ -81,7 +67,7 @@ class DeliverWorkOrderRequest extends FormRequest
         return [
             ...$this->validated(),
             'gross_out' => Amount::parse($this->input('gross_out')),
-            'labor_rate' => Amount::parse($this->input('labor_rate')),
+            'labor_purity' => Workshop::parseLaborPurity($this->input('labor_purity')),
         ];
     }
 }

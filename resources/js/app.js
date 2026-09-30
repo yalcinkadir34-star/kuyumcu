@@ -30,76 +30,75 @@ const parsePurity = (value) => {
     return number > 1 && number <= 1000 ? number / 1000 : number;
 };
 
+// İşçilik milyemi: "0,040" → 0.04, "40" → 0.04 (binde), boş → 0
+const parseLaborPurity = (value) => {
+    if (String(value ?? '').trim() === '') return 0;
+    const number = parseNumber(value);
+    return number >= 1 ? number / 1000 : number;
+};
+
 const formatNumber = (number, decimals = 3) =>
     Number.isFinite(number)
         ? number.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
         : '—';
 
-// Atölye giriş formu: has karşılığı + firmanın son milyemini öner
+// Atölye giriş formu: has = gram × (ayar + giriş işçiliği); firmanın son değerlerini öner
 const workOrderForm = document.querySelector('[data-workorder-form]');
 
 if (workOrderForm) {
     const gram = workOrderForm.querySelector('[data-gram]');
     const purity = workOrderForm.querySelector('[data-purity]');
+    const labor = workOrderForm.querySelector('[data-labor-in]');
     const account = workOrderForm.querySelector('[data-account]');
     const hint = workOrderForm.querySelector('[data-purity-hint]');
     const lastPurities = JSON.parse(workOrderForm.dataset.lastPurities || '{}');
 
     const update = () => {
-        const has = parseNumber(gram.value) * parsePurity(purity.value);
+        const total = parsePurity(purity.value) + parseLaborPurity(labor.value);
+        const has = parseNumber(gram.value) * total;
+        workOrderForm.querySelector('[data-in-purity]').textContent = total > 0 ? formatNumber(total) : '—';
         workOrderForm.querySelector('[data-has-out]').textContent = has > 0 ? formatNumber(has) : '—';
     };
 
     const suggest = () => {
         const last = lastPurities[account.value];
-        hint.textContent = last ? `Bu firmanın son milyemi: ${last}` : '';
-        if (last && purity.value === '') {
-            purity.value = last;
-            update();
-        }
+        hint.textContent = last ? `Bu firmanın son girişi: ayar ${last.purity}, işçilik ${last.labor}` : '';
+        if (last && purity.value === '') purity.value = last.purity;
+        if (last && labor.value === '') labor.value = last.labor;
+        update();
     };
 
-    gram.addEventListener('input', update);
-    purity.addEventListener('input', update);
+    workOrderForm.addEventListener('input', update);
     account.addEventListener('change', suggest);
     suggest();
-    update();
 }
 
-// Atölye çıkış formu: çıkan has, kalacak miktar ve işçilik önizlemesi
+// Atölye çıkış formu: has = gram × (ayar + çıkış işçiliği), kalacak miktar
 const deliverForm = document.querySelector('[data-deliver-form]');
 
 if (deliverForm) {
     const remaining = Number(deliverForm.dataset.remaining);
     const purity = Number(deliverForm.dataset.purity);
     const out = deliverForm.querySelector('[data-gross-out]');
-    const rate = deliverForm.querySelector('[data-labor-rate]');
-    const currency = deliverForm.querySelector('[data-labor-currency]');
+    const labor = deliverForm.querySelector('[data-labor-purity]');
     const set = (selector, text) => (deliverForm.querySelector(selector).textContent = text);
 
     const update = () => {
-        const basis = deliverForm.querySelector('[data-labor-basis]:checked')?.value ?? 'gram';
-        const option = currency.selectedOptions[0];
-        const decimals = Number(option.dataset.decimals);
         const gramOut = parseNumber(out.value);
+        const total = purity + parseLaborPurity(labor.value);
 
-        set('[data-labor-label]', basis === 'gram' ? 'Gram başı işçilik' : 'Toplam işçilik');
+        set('[data-out-purity]', formatNumber(total));
 
         if (gramOut > 0) {
-            set('[data-preview-has]', formatNumber(gramOut * purity));
+            set('[data-preview-has]', formatNumber(gramOut * total));
             set('[data-preview-remaining]', formatNumber(remaining - gramOut));
         } else {
             set('[data-preview-has]', '—');
             set('[data-preview-remaining]', formatNumber(remaining));
         }
-
-        const rateValue = parseNumber(rate.value);
-        const labor = basis === 'gram' ? rateValue * gramOut : rateValue;
-        set('[data-preview-labor]', labor >= 0 ? `${formatNumber(labor, decimals)} ${option.dataset.symbol}` : '—');
     };
 
     deliverForm.addEventListener('input', update);
-    deliverForm.addEventListener('change', update);
     update();
 }
 

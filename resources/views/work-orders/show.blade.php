@@ -8,6 +8,7 @@
     @php
         $gr = new \App\Models\Currency(['symbol' => 'gr', 'decimals' => 3]);
         $remaining = $order->remainingMilli();
+        $p = fn ($value) => Workshop::formatPurity($value);
     @endphp
 
     <x-page-header :title="$order->number.' · '.$order->product" :back="route('work-orders.index')">
@@ -31,17 +32,19 @@
             <div class="p-5">
                 <dt class="text-xs font-medium text-stone-500">Giriş · {{ $order->received_at->format('d.m.Y') }}</dt>
                 <dd class="mt-1 text-xl font-semibold tabular-nums">{{ Amount::format($order->gross_in, $gr) }}</dd>
-                <dd class="mt-0.5 text-xs text-stone-500">Milyem {{ Workshop::formatPurity($order->purity) }}</dd>
+                <dd class="mt-0.5 text-xs text-stone-500">
+                    Ayar {{ $p($order->purity) }} + işçilik {{ $p($order->labor_purity_in) }} = <span class="font-medium text-stone-700">{{ $p($order->inPurity()) }}</span>
+                </dd>
             </div>
             <div class="bg-gold-50/60 p-5">
-                <dt class="text-xs font-medium text-gold-800">Has karşılığı</dt>
+                <dt class="text-xs font-medium text-gold-800">Giriş has</dt>
                 <dd class="mt-1 text-xl font-semibold tabular-nums text-gold-900">{{ Amount::format($order->has_in, $gr) }}</dd>
                 <dd class="mt-0.5 text-xs text-gold-800">Carisine alacak yazıldı</dd>
             </div>
             <div class="p-5">
                 <dt class="text-xs font-medium text-stone-500">Çıkan ({{ $order->deliveries->count() }} çıkış)</dt>
                 <dd class="mt-1 text-xl font-semibold tabular-nums">{{ Amount::formatMilli($order->deliveredMilli(), $gr) }}</dd>
-                <dd class="mt-0.5 text-xs text-stone-500">{{ Amount::formatMilli($order->deliveries->sum(fn ($d) => Amount::toMilli($d->has_out)), $gr) }} has</dd>
+                <dd class="mt-0.5 text-xs text-stone-500">{{ Amount::formatMilli($order->deliveries->sum(fn ($d) => Amount::toMilli($d->has_out)), $gr) }} has carisine borç yazıldı</dd>
             </div>
             <div @class(['p-5', 'bg-amber-50/60' => ! $order->isClosed(), 'bg-red-50/50' => $order->isClosed()])>
                 <dt @class(['text-xs font-medium', 'text-amber-800' => ! $order->isClosed(), 'text-red-700' => $order->isClosed()])>
@@ -51,7 +54,7 @@
                     {{ Amount::formatMilli($remaining, $gr) }}
                 </dd>
                 <dd class="mt-0.5 text-xs text-stone-500">
-                    %{{ number_format($order->remainingRate(), 2, ',', '.') }} · {{ Amount::formatMilli($order->remainingHasMilli(), $gr) }} has
+                    %{{ number_format($order->remainingRate(), 2, ',', '.') }} · {{ Amount::formatMilli($order->remainingHasMilli(), $gr) }} saf has ({{ $p($order->purity) }})
                 </dd>
             </div>
         </dl>
@@ -75,8 +78,8 @@
                             <tr>
                                 <th>Tarih</th>
                                 <th class="text-right">Gram</th>
+                                <th class="text-right">Milyem</th>
                                 <th class="text-right">Has</th>
-                                <th class="text-right">İşçilik</th>
                                 <th class="w-10"></th>
                             </tr>
                         </thead>
@@ -90,17 +93,15 @@
                                         @endif
                                     </td>
                                     <td class="text-right font-medium tabular-nums whitespace-nowrap">{{ Amount::format($delivery->gross_out, $gr) }}</td>
-                                    <td class="text-right tabular-nums whitespace-nowrap text-gold-800">{{ Amount::format($delivery->has_out, $gr) }}</td>
                                     <td class="text-right tabular-nums whitespace-nowrap">
-                                        {{ Amount::format($delivery->labor_total, $delivery->laborCurrency) }}
-                                        @if ($delivery->labor_basis === 'gram')
-                                            <div class="text-xs text-stone-400">gr başı {{ Amount::format($delivery->labor_rate, $delivery->laborCurrency) }}</div>
-                                        @endif
+                                        {{ $p($delivery->outPurity()) }}
+                                        <div class="text-xs text-stone-400">{{ $p($order->purity) }} + {{ $p($delivery->labor_purity) }} işçilik</div>
                                     </td>
+                                    <td class="text-right font-medium tabular-nums whitespace-nowrap text-gold-800">{{ Amount::format($delivery->has_out, $gr) }}</td>
                                     <td class="text-right">
                                         @if (auth()->user()->isAdmin())
                                             <form method="POST" action="{{ route('work-orders.deliveries.destroy', [$order, $delivery]) }}"
-                                                  data-confirm="Bu çıkış silinsin mi? Cari kayıtları da geri alınacak.">
+                                                  data-confirm="Bu çıkış silinsin mi? Cari kaydı da geri alınacak.">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button class="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600" title="Çıkışı sil" aria-label="Çıkışı sil">
@@ -140,6 +141,14 @@
                         </div>
 
                         <div>
+                            <label for="labor_purity" class="label">Çıkış işçiliği (milyem)</label>
+                            <input id="labor_purity" name="labor_purity" inputmode="decimal" autocomplete="off" data-labor-purity
+                                   value="{{ old('labor_purity', $defaultLaborPurity !== null ? $p($defaultLaborPurity) : '') }}"
+                                   class="input text-right tabular-nums @error('labor_purity') input-error @enderror" placeholder="0,040">
+                            @error('labor_purity') <p class="field-error">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div>
                             <label for="delivered_at" class="label">Çıkış tarihi <span class="text-red-500">*</span></label>
                             <input id="delivered_at" name="delivered_at" type="date" required
                                    value="{{ old('delivered_at', now()->format('Y-m-d')) }}"
@@ -147,36 +156,7 @@
                             @error('delivered_at') <p class="field-error">{{ $message }}</p> @enderror
                         </div>
 
-                        <div class="sm:col-span-2">
-                            <span class="label">İşçilik tipi</span>
-                            <div class="flex rounded-lg border border-stone-300 p-0.5 text-sm">
-                                @foreach (['gram' => 'Gram başı', 'toplam' => 'Toplam tutar'] as $value => $label)
-                                    <label class="flex-1 cursor-pointer">
-                                        <input type="radio" name="labor_basis" value="{{ $value }}" data-labor-basis class="peer sr-only"
-                                               @checked(old('labor_basis', $defaults['labor_basis']) === $value)>
-                                        <span class="block rounded-md px-3 py-1.5 text-center text-stone-600 peer-checked:bg-stone-900 peer-checked:text-white">{{ $label }}</span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
-
-                        <div class="sm:col-span-2">
-                            <label for="labor_rate" class="label"><span data-labor-label>İşçilik</span> <span class="text-red-500">*</span></label>
-                            <div class="flex">
-                                <input id="labor_rate" name="labor_rate" inputmode="decimal" autocomplete="off" required data-labor-rate
-                                       value="{{ old('labor_rate', Amount::forInput($defaults['labor_rate'])) }}"
-                                       class="input rounded-r-none text-right tabular-nums @error('labor_rate') input-error @enderror" placeholder="0">
-                                <select name="labor_currency_id" data-labor-currency aria-label="İşçilik birimi" class="input w-auto rounded-l-none border-l-0 bg-stone-50">
-                                    @foreach ($currencies as $currency)
-                                        <option value="{{ $currency->id }}" data-symbol="{{ $currency->symbol }}" data-decimals="{{ $currency->decimals }}"
-                                                @selected((int) old('labor_currency_id', $defaults['labor_currency_id']) === $currency->id)>{{ $currency->code === 'HAS' ? 'Has gr' : $currency->code }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            @error('labor_rate') <p class="field-error">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div class="sm:col-span-2">
+                        <div>
                             <label for="notes" class="label">Not</label>
                             <input id="notes" name="notes" value="{{ old('notes') }}" class="input" placeholder="İsteğe bağlı">
                         </div>
@@ -185,16 +165,17 @@
                     {{-- Canlı hesap önizlemesi --}}
                     <div class="grid grid-cols-3 gap-px border-y border-stone-200 bg-stone-200 text-sm">
                         <div class="bg-white p-3">
-                            <div class="text-xs text-stone-500">Çıkan has</div>
+                            <div class="text-xs text-stone-500">Hesap milyemi</div>
+                            <div class="mt-0.5 font-semibold tabular-nums" data-out-purity>—</div>
+                            <div class="text-[11px] text-stone-400">{{ $p($order->purity) }} + işçilik</div>
+                        </div>
+                        <div class="bg-white p-3">
+                            <div class="text-xs text-stone-500">Cariden düşecek has</div>
                             <div class="mt-0.5 font-semibold tabular-nums text-gold-800"><span data-preview-has>—</span> gr</div>
                         </div>
                         <div class="bg-white p-3">
-                            <div class="text-xs text-stone-500">Kalacak</div>
+                            <div class="text-xs text-stone-500">Atölyede kalacak</div>
                             <div class="mt-0.5 font-semibold tabular-nums"><span data-preview-remaining>—</span> gr</div>
-                        </div>
-                        <div class="bg-white p-3">
-                            <div class="text-xs text-stone-500">İşçilik</div>
-                            <div class="mt-0.5 font-semibold tabular-nums" data-preview-labor>—</div>
                         </div>
                     </div>
 

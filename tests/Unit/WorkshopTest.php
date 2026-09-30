@@ -35,6 +35,23 @@ class WorkshopTest extends TestCase
         }
     }
 
+    public function test_iscilik_milyemi_cozumlenir(): void
+    {
+        $this->assertSame('0.0100', Workshop::parseLaborPurity('0,010'));
+        $this->assertSame('0.0400', Workshop::parseLaborPurity('0,04'));
+        $this->assertSame('0.0400', Workshop::parseLaborPurity('40'));
+        $this->assertSame('0.0000', Workshop::parseLaborPurity(''));
+        $this->assertSame('0.0000', Workshop::parseLaborPurity('0'));
+        $this->assertNull(Workshop::parseLaborPurity('0,40'));  // 0,200 üstü: yazım hatası
+        $this->assertNull(Workshop::parseLaborPurity('abc'));
+    }
+
+    public function test_milyemler_toplanir(): void
+    {
+        $this->assertSame('0.6250', Workshop::addPurity('0.5850', '0.0400'));
+        $this->assertSame('0.5950', Workshop::addPurity('0.5850', '0.0100'));
+    }
+
     public function test_has_karsiligi_hesaplanir(): void
     {
         // 200 gr × 0,585 = 117 gr has

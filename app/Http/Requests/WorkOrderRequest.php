@@ -33,7 +33,12 @@ class WorkOrderRequest extends FormRequest
             }],
             'purity' => ['required', function (string $attribute, mixed $value, Closure $fail) {
                 if (Workshop::parsePurity((string) $value) === null) {
-                    $fail('Milyem geçersiz. Örnek: 0,585 veya 585');
+                    $fail('Ayar milyemi geçersiz. Örnek: 0,585 veya 585');
+                }
+            }],
+            'labor_purity_in' => ['nullable', function (string $attribute, mixed $value, Closure $fail) {
+                if (Workshop::parseLaborPurity((string) $value) === null) {
+                    $fail('Giriş işçiliği geçersiz. Örnek: 0,010 (en fazla 0,200)');
                 }
             }],
             'notes' => ['nullable', 'string', 'max:2000'],
@@ -47,7 +52,8 @@ class WorkOrderRequest extends FormRequest
             'product' => 'ürün',
             'received_at' => 'giriş tarihi',
             'gross_in' => 'giriş gramı',
-            'purity' => 'milyem',
+            'purity' => 'ayar milyemi',
+            'labor_purity_in' => 'giriş işçiliği',
         ];
     }
 
@@ -57,6 +63,7 @@ class WorkOrderRequest extends FormRequest
             ...$this->validated(),
             'gross_in' => Amount::parse($this->input('gross_in')),
             'purity' => Workshop::parsePurity($this->input('purity')),
+            'labor_purity_in' => Workshop::parseLaborPurity($this->input('labor_purity_in')),
         ];
     }
 }

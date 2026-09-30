@@ -46,6 +46,53 @@ class Workshop
         return intdiv($scaled, self::PURITY_SCALE).'.'.str_pad((string) ($scaled % self::PURITY_SCALE), 4, '0', STR_PAD_LEFT);
     }
 
+    /** İşçilik milyemi için üst sınır (0,200). Daha büyüğü büyük ihtimalle yazım hatasıdır. */
+    public const MAX_LABOR_PURITY = 2000;
+
+    /**
+     * İşçilik milyemini "0.0400" biçimine çevirir; geçersizse null. Sıfır olabilir.
+     * Kabul edilenler: "0,040", "0,04", ",040", "40" (binde olarak), "0"
+     */
+    public static function parseLaborPurity(?string $input): ?string
+    {
+        $value = str_replace(' ', '', trim((string) $input));
+
+        if ($value === '' || $value === '0') {
+            return '0.0000';
+        }
+
+        if (str_starts_with($value, ',') || str_starts_with($value, '.')) {
+            $value = '0'.$value;
+        }
+
+        $value = str_replace(',', '.', $value);
+
+        if (! preg_match('/^\d+(\.\d{1,4})?$/', $value)) {
+            return null;
+        }
+
+        // "40" gibi binde yazılmış değerler
+        if (! str_contains($value, '.')) {
+            $value = '0.'.str_pad($value, 3, '0', STR_PAD_LEFT);
+        }
+
+        $scaled = self::purityToInt($value);
+
+        if ($scaled < 0 || $scaled > self::MAX_LABOR_PURITY) {
+            return null;
+        }
+
+        return '0.'.str_pad((string) $scaled, 4, '0', STR_PAD_LEFT);
+    }
+
+    /** İki milyemin toplamı ("0.5850" + "0.0400" → "0.6250"). */
+    public static function addPurity(string|float|null $a, string|float|null $b): string
+    {
+        $scaled = self::purityToInt($a) + self::purityToInt($b);
+
+        return intdiv($scaled, self::PURITY_SCALE).'.'.str_pad((string) ($scaled % self::PURITY_SCALE), 4, '0', STR_PAD_LEFT);
+    }
+
     public static function purityToInt(string|float|null $purity): int
     {
         [$int, $frac] = array_pad(explode('.', (string) ($purity ?? '0')), 2, '');
@@ -56,7 +103,7 @@ class Workshop
     /** Ekranda milyem: "0.5850" → "0,585" */
     public static function formatPurity(string|float|null $purity): string
     {
-        $scaled = self::purityToInt($purity);
+        $scaled = self::purityToInt(is_float($purity) ? sprintf('%.4F', $purity) : $purity);
         $frac = rtrim(str_pad((string) ($scaled % self::PURITY_SCALE), 4, '0', STR_PAD_LEFT), '0');
 
         return intdiv($scaled, self::PURITY_SCALE).','.str_pad($frac, 3, '0');

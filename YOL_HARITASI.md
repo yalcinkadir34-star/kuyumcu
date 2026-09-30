@@ -5,7 +5,7 @@
 > Her geliştirmeden sonra güncellenir ve commit edilir.
 
 **Son güncelleme:** 30.09.2026
-**Mevcut sürüm:** 0.3.2: Atölyede parçalı çıkış, fire cariye işlenmiyor
+**Mevcut sürüm:** 0.3.3: Atölye işçiliği milyem olarak (ayar + işçilik)
 
 ---
 
@@ -282,9 +282,41 @@ Yeni birim (ör. 22 ayar, gümüş) eklemek için tabloya satır eklemek yeterli
 - Adresler: `POST /atolye/{id}/cikis`, `DELETE /atolye/{id}/cikis/{cikis}`, `POST|DELETE /atolye/{id}/kapat`
 - Testler: 65 test, hepsi geçiyor
 
+### ✅ v0.3.3: İşçilik milyem olarak, ayar milyemine eklenir (01.10.2026)
+
+**Kullanıcı geri bildirimi:** "Ürün 26,25 ile girdi, 0,010 işçilikle aldık, yani 0,595 ile aldık.
+6,97 teslim ettik, 0,040 işçilikle, yani 0,625 ile teslim ettik. Has borcumuz 57,49 olmalı, neden fark var?"
+
+**Hata:** Çıkışta hem `6,97 × 0,595 = 4,147` has çıkışı hem de ayrıca `6,97 × 0,625 = 4,356` has işçilik
+düşülmüştü, yani işçilik **iki kez** sayılmıştı. Sistem 53,546 gösteriyordu, doğrusu 57,693.
+
+**Güncel formül** (işçilik ayrı bir kayıt değil, milyemin içinde):
+- **Giriş has** = giriş gramı × (ayar milyemi + giriş işçiliği) → 26,25 × (0,585 + 0,010) = **15,619** → cari **alacak**
+- **Çıkış has** = çıkış gramı × (ayar milyemi + çıkış işçiliği) → 6,97 × (0,585 + 0,040) = **4,356** → cari **borç**
+- Mustafa: 46,430 + 15,619 − 4,356 = **57,693 gr has** borcumuz
+  - ⚠️ Kullanıcı 57,49 bekliyordu, 0,203 gr fark var. Kullanıcıya soruldu (bkz. Bölüm 5)
+- **Atölyede kalan** gram, bilançoda **ayar milyemiyle** (işçiliksiz) saf has olarak sayılır: 19,28 × 0,585 = 11,279
+
+**Değişenler**
+- Giriş formu: **Ayar milyemi** + **Giriş işçiliği (milyem)** alanları, canlı "hesap milyemi" ve has
+  - Firmanın son girişindeki ayar ve işçilik otomatik önerilir
+- Çıkış formu: gram + **Çıkış işçiliği (milyem)**. TL/döviz işçilik ve gram başı/toplam seçimi **kaldırıldı**
+  - Varsayılan işçilik: bu fişin ya da firmanın son çıkışındaki işçilik milyemi
+- İşçilik milyemi `0,040`, `0,04` veya `40` (binde) olarak yazılabilir. **0,200 üstü reddedilir**
+  (ör. "0,40" yazılırsa uyarı verir, büyük ihtimalle 0,040 kastedilmiştir)
+- Yeni alanlar: `work_orders.labor_purity_in`, `work_order_deliveries.labor_purity`.
+  Kaldırılanlar: çıkıştaki `labor_basis`, `labor_rate`, `labor_total`, `labor_currency_id`, `labor_transaction_id`
+- Yeni komut: `php artisan atolye:yeniden-hesapla` (tüm fişlerin has ve cari kayıtlarını güncel formülle yeniden hesaplar)
+- Yerel veri düzeltmesi: A00001 → ayar 0,585, giriş işçiliği 0,010, çıkış işçiliği 0,040 (kullanıcının verdiği bilgi), ardından yeniden hesap
+- Yedek: `storage/app/yedek/kuyumcu-2026-10-01-iscilik-oncesi.sql`
+- Testler: 68 test, hepsi geçiyor. Kullanıcının örneği `test_kullanicinin_ornegi_iscilik_milyemle_hesaplanir`
+
 ---
 
 ## 5. Yapılacaklar
+
+### ❓ Kullanıcıya sorulan açık konular
+- Mustafa has bakiyesi: sistem **57,693**, kullanıcı **57,49** bekliyor (0,203 gr fark). Hesabın kontrolü bekleniyor
 
 ### ⏳ Sıradaki: kullanıcıdan özellik detayları bekleniyor
 Aşağıdaki modüller menüde yer tutucu olarak var. Kapsamları kullanıcıyla netleştirilecek.

@@ -81,22 +81,18 @@ class WorkOrderController extends Controller
 
     public function show(WorkOrder $workOrder): View
     {
-        $workOrder->load(['account', 'creator', 'deliveries.laborCurrency']);
+        $workOrder->load(['account', 'creator', 'deliveries']);
 
-        // Çıkış formu için varsayılanlar: bu firmanın son çıkışındaki işçilik ayarı
-        $last = WorkOrderDelivery::query()
-            ->whereHas('workOrder', fn ($q) => $q->where('account_id', $workOrder->account_id))
-            ->latest('id')
-            ->first();
+        // Çıkış işçiliği varsayılanı: bu fişin ya da firmanın son çıkışındaki işçilik milyemi
+        $lastLabor = $workOrder->deliveries->last()?->labor_purity
+            ?? WorkOrderDelivery::query()
+                ->whereHas('workOrder', fn ($q) => $q->where('account_id', $workOrder->account_id))
+                ->latest('id')
+                ->value('labor_purity');
 
         return view('work-orders.show', [
             'order' => $workOrder,
-            'currencies' => Currency::activeList(),
-            'defaults' => [
-                'labor_basis' => $last?->labor_basis ?? 'gram',
-                'labor_rate' => $last?->labor_rate,
-                'labor_currency_id' => $last?->labor_currency_id ?? Currency::firstWhere('code', 'TRY')?->id,
-            ],
+            'defaultLaborPurity' => $lastLabor,
         ]);
     }
 
@@ -127,11 +123,8 @@ class WorkOrderController extends Controller
         $gr = new Currency(['symbol' => 'gr', 'decimals' => 3]);
 
         $message = 'Çıkış kaydedildi: '.Amount::format($delivery->gross_out, $gr)
-            .'. Cariye işlendi: '.Amount::format($delivery->has_out, $gr).' has';
-
-        if ($delivery->labor_transaction_id) {
-            $message .= ' ve '.Amount::format($delivery->labor_total, $delivery->laborCurrency).' işçilik';
-        }
+            .' × '.Workshop::formatPurity($delivery->outPurity())
+            .' = '.Amount::format($delivery->has_out, $gr).' has cariye borç yazıldı';
 
         $workOrder->unsetRelation('deliveries');
         $message .= '. Atölyede kalan: '.Amount::formatMilli($workOrder->remainingMilli(), $gr).'.';
@@ -195,11 +188,14 @@ class WorkOrderController extends Controller
                 ->where(fn ($q) => $q->where('is_active', true)->orWhere('id', $order->account_id))
                 ->orderBy('name')
                 ->get(['id', 'code', 'name']),
-            // Her firmanın son kullandığı milyem, formda öneri olarak gösterilir
+            // Her firmanın son kullandığı ayar ve giriş işçiliği, formda öneri olarak gösterilir
             'lastPurities' => WorkOrder::query()
-                ->select('account_id', 'purity')
                 ->whereIn('id', WorkOrder::query()->selectRaw('MAX(id)')->groupBy('account_id'))
-                ->pluck('purity', 'account_id'),
+                ->get(['account_id', 'purity', 'labor_purity_in'])
+                ->mapWithKeys(fn (WorkOrder $o) => [$o->account_id => [
+                    'purity' => Workshop::formatPurity($o->purity),
+                    'labor' => Workshop::formatPurity($o->labor_purity_in),
+                ]]),
         ];
     }
 
