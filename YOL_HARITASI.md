@@ -5,7 +5,7 @@
 > Her geliştirmeden sonra güncellenir ve commit edilir.
 
 **Son güncelleme:** 30.09.2026
-**Mevcut sürüm:** 0.3.1: Atölye has hareketleri cariye işleniyor
+**Mevcut sürüm:** 0.3.2: Atölyede parçalı çıkış, fire cariye işlenmiyor
 
 ---
 
@@ -258,7 +258,7 @@ Kuyumculuk sektörü için **öneri** niteliğindeki başlıklar:
 - [x] **Atölye**: fason iş emirleri: giriş (gram, milyem, has), çıkış (tartı, fire), işçilik → cari (v0.3)
 - [ ] **Fire geri kazanımı (aylık rafine/remat)**: dönemsel fire toplamı, rafineden geri alınan has girişi, kazanım oranı
 - [x] Firma bazında has hesabı: giriş, teslim ve fire cariye işleniyor (v0.3.1)
-- [ ] Parçalı teslim (bir girişin birkaç seferde teslim edilmesi): ihtiyaç olursa
+- [x] Parçalı teslim (bir girişin birkaç seferde çıkışı) (v0.3.2)
 - [ ] Atölye fişi yazdırma (giriş/teslim fişi)
 - [ ] **Google Drive'a otomatik yedek**: veritabanı ve dosyaların düzenli yedeği (kullanıcı istedi, 30.09.2026)
   - Plan: `spatie/laravel-backup` + Google Drive bağlantısı. Kullanıcının Google Cloud'da bir kerelik izin oluşturması gerekecek

@@ -65,7 +65,11 @@ class Balances
 
         // Atölyede işlem gören ürünlerin has karşılığı (firmalara ait, karşılığı carilerde alacak olarak duruyor)
         $hasId = DB::table('currencies')->where('code', 'HAS')->value('id');
-        $inWorkshop = Amount::toMilli(DB::table('work_orders')->where('status', 'atolyede')->sum('has_in'));
+        $inWorkshop = Amount::toMilli(DB::table('work_orders')->where('status', 'atolyede')->sum('has_in'))
+            - Amount::toMilli(DB::table('work_order_deliveries')
+                ->join('work_orders', 'work_orders.id', '=', 'work_order_deliveries.work_order_id')
+                ->where('work_orders.status', 'atolyede')
+                ->sum('work_order_deliveries.has_out'));
 
         if ($hasId && $inWorkshop !== 0) {
             $result[$hasId] = [...$empty, 'atolye' => $inWorkshop];

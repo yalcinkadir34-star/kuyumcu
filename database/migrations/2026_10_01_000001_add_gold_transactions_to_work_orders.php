@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\WorkOrder;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -20,15 +19,8 @@ return new class extends Migration
             $table->string('fire_bearer', 10)->nullable()->after('fire_has'); // firma | atolye
         });
 
-        // Daha önce girilmiş fişleri cariye işle
-        WorkOrder::query()->orderBy('id')->each(function (WorkOrder $order) {
-            if ($order->isDelivered()) {
-                $order->fire_bearer ??= WorkOrder::FIRE_FIRMA;
-            }
-
-            $order->syncGoldTransactions();
-            $order->saveQuietly();
-        });
+        // Daha önce girilmiş fişlerin cariye işlenmesi bir sonraki migration'da yapılır
+        // (2026_10_01_000002: parçalı çıkış yapısı).
     }
 
     public function down(): void

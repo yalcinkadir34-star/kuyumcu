@@ -41,245 +41,228 @@ class AtolyeTest extends TestCase
         return WorkOrder::latest('id')->first();
     }
 
-    private function teslim(WorkOrder $order, array $data = [])
+    private function cikis(WorkOrder $order, array $data = [])
     {
         return $this->actingAs($this->user)->post(route('work-orders.deliver', $order), $data + [
             'delivered_at' => '2026-09-10',
             'gross_out' => '160',
-            'fire_bearer' => 'firma',
             'labor_basis' => 'gram',
             'labor_rate' => '15',
-            'labor_currency_id' => Currency::firstWhere('code', 'TRY')->id,
+            'labor_currency_id' => $this->birim('TRY')->id,
         ]);
     }
 
-    public function test_giriste_has_karsiligi_hesaplanir(): void
+    private function birim(string $code): Currency
+    {
+        return Currency::firstWhere('code', $code);
+    }
+
+    private function bakiye(string $code): int
+    {
+        return $this->firma->balances()[$this->birim($code)->id] ?? 0;
+    }
+
+    public function test_giriste_has_hesaplanir_ve_cariye_alacak_yazilir(): void
     {
         $order = $this->giris();
 
         $this->assertSame('A00001', $order->number);
         $this->assertSame('117.000', $order->has_in);
-        $this->assertSame('0.5850', $order->purity);
         $this->assertSame(WorkOrder::STATUS_ATOLYEDE, $order->status);
+        $this->assertSame(-117_000, $this->bakiye('HAS')); // firmaya 117 gr has borçluyuz
     }
 
-    private function hasBakiye(): int
+    public function test_kullanicinin_ornegi_parcali_cikis_kalan_atolyede_kalir(): void
     {
-        return $this->firma->balances()[Currency::firstWhere('code', 'HAS')->id] ?? 0;
+        // 26,25 gr × 0,595 giriş, 6,97 gr çıkış → 19,28 gr atölyede kalır
+        $order = $this->giris(['gross_in' => '26,25', 'purity' => '0,595']);
+        $this->cikis($order, ['gross_out' => '6,97', 'labor_rate' => '0'])->assertSessionHasNoErrors();
+
+        $order->refresh();
+
+        $this->assertSame(19_280, $order->remainingMilli());
+        $this->assertSame(WorkOrder::STATUS_ATOLYEDE, $order->status);
+
+        // Cari: 15,619 alacak − 4,147 çıkış = 11,472 gr has borcumuz devam ediyor. Fire kaydı yok.
+        $this->assertSame(-11_472, $this->bakiye('HAS'));
+        $this->assertSame(2, Transaction::count());
     }
 
-    public function test_giriste_has_firmanin_carisine_alacak_yazilir(): void
-    {
-        // Kullanıcının örneği: 26,25 gr × 0,595 = 15,619 gr has → firmaya borcumuz artar
-        $this->giris(['gross_in' => '26,25', 'purity' => '0,595']);
-
-        $this->assertSame(-15_619, $this->hasBakiye());
-    }
-
-    public function test_fireyi_firma_ustlenirse_has_borcu_kapanir(): void
-    {
-        $order = $this->giris();
-        $this->assertSame(-117_000, $this->hasBakiye());
-
-        $this->teslim($order, ['fire_bearer' => 'firma']);
-
-        // 117 alacak − 93,6 teslim − 23,4 fire = 0
-        $this->assertSame(0, $this->hasBakiye());
-    }
-
-    public function test_fireyi_atolye_ustlenirse_fire_firmaya_borc_kalir(): void
+    public function test_birden_fazla_cikis_yapilabilir(): void
     {
         $order = $this->giris();
-        $this->teslim($order, ['fire_bearer' => 'atolye']);
 
-        // 117 alacak − 93,6 teslim = 23,4 gr has firmaya borcumuz
-        $this->assertSame(-23_400, $this->hasBakiye());
-        $this->assertNull($order->fresh()->fire_transaction_id);
+        $this->cikis($order, ['gross_out' => '100']);
+        $this->cikis($order, ['gross_out' => '60']);
+
+        $order->refresh();
+
+        $this->assertCount(2, $order->deliveries);
+        $this->assertSame(40_000, $order->remainingMilli());
+        $this->assertSame(20.0, $order->remainingRate());
+
+        // 117 − 58,5 − 35,1 = 23,4 gr has borcumuz kalır
+        $this->assertSame(-23_400, $this->bakiye('HAS'));
+        // İşçilik: (100 + 60) × 15 = 2.400 TL
+        $this->assertSame(2_400_000, $this->bakiye('TRY'));
     }
 
-    public function test_giris_duzenlenince_cari_has_guncellenir(): void
+    public function test_cikis_kalandan_fazla_olamaz(): void
     {
         $order = $this->giris();
+        $this->cikis($order, ['gross_out' => '150']);
+
+        $this->cikis($order, ['gross_out' => '60'])->assertSessionHasErrors('gross_out');
+        $this->assertCount(1, $order->deliveries()->get());
+    }
+
+    public function test_iscilik_has_olarak_alinabilir(): void
+    {
+        $order = $this->giris();
+
+        $this->cikis($order, ['labor_rate' => '0,02', 'labor_currency_id' => $this->birim('HAS')->id])
+            ->assertSessionHasNoErrors();
+
+        // −117 + 93,6 (çıkış) + 3,2 (160 × 0,02 işçilik) = −20,2
+        $this->assertSame(-20_200, $this->bakiye('HAS'));
+    }
+
+    public function test_iscilik_sifirsa_iscilik_kaydi_olusmaz(): void
+    {
+        $order = $this->giris();
+        $this->cikis($order, ['labor_rate' => '0']);
+
+        $this->assertNull($order->deliveries()->first()->labor_transaction_id);
+        $this->assertSame(2, Transaction::count()); // giriş + çıkış
+    }
+
+    public function test_fis_kapatilinca_kalan_fire_sayilir_cariye_islenmez(): void
+    {
+        $order = $this->giris();
+        $this->cikis($order);
+
+        $this->actingAs($this->user)->post(route('work-orders.close', $order))->assertRedirect();
+        $order->refresh();
+
+        $this->assertTrue($order->isClosed());
+        $this->assertSame(40_000, $order->remainingMilli());
+        $this->assertSame(-23_400, $this->bakiye('HAS')); // cari değişmedi
+
+        $this->actingAs($this->user)->delete(route('work-orders.reopen', $order));
+        $this->assertFalse($order->fresh()->isClosed());
+    }
+
+    public function test_cikis_silinince_cari_kayitlari_geri_alinir(): void
+    {
+        $order = $this->giris();
+        $this->cikis($order);
+        $delivery = $order->deliveries()->first();
+
+        $this->actingAs($this->user)
+            ->delete(route('work-orders.deliveries.destroy', [$order, $delivery]))
+            ->assertRedirect();
+
+        $this->assertSame(1, Transaction::count()); // sadece giriş
+        $this->assertSame(-117_000, $this->bakiye('HAS'));
+        $this->assertSame(0, $this->bakiye('TRY'));
+    }
+
+    public function test_milyem_duzenlenince_giris_ve_cikislar_yeniden_hesaplanir(): void
+    {
+        $order = $this->giris();
+        $this->cikis($order, ['labor_rate' => '0']);
 
         $this->actingAs($this->user)->put(route('work-orders.update', $order), [
             'account_id' => $this->firma->id,
             'product' => '14 ayar bilezik',
             'received_at' => '2026-09-01',
-            'gross_in' => '100',
-            'purity' => '0,585',
-        ]);
+            'gross_in' => '200',
+            'purity' => '0,595',
+        ])->assertSessionHasNoErrors();
 
-        $this->assertSame(-58_500, $this->hasBakiye());
-        $this->assertSame(1, Transaction::count());
+        // 200 × 0,595 = 119 alacak, 160 × 0,595 = 95,2 çıkış → 23,8
+        $this->assertSame(-23_800, $this->bakiye('HAS'));
+        $this->assertSame('95.200', $order->deliveries()->first()->has_out);
     }
 
-    public function test_fis_silinince_cari_kaydi_da_silinir(): void
+    public function test_giris_cikislardan_az_yapilamaz(): void
     {
         $order = $this->giris();
+        $this->cikis($order);
 
-        $this->actingAs($this->user)->delete(route('work-orders.destroy', $order))->assertRedirect();
+        $this->actingAs($this->user)->put(route('work-orders.update', $order), [
+            'account_id' => $this->firma->id,
+            'product' => '14 ayar bilezik',
+            'received_at' => '2026-09-01',
+            'gross_in' => '150',
+            'purity' => '0,585',
+        ])->assertSessionHasErrors('gross_in');
+    }
 
-        $this->assertSame(0, Transaction::count());
+    public function test_cikisi_olan_fis_silinemez_olmayan_silinir(): void
+    {
+        $bos = $this->giris();
+        $dolu = $this->giris();
+        $this->cikis($dolu);
+
+        $this->actingAs($this->user)->delete(route('work-orders.destroy', $dolu))->assertSessionHas('error');
+        $this->actingAs($this->user)->delete(route('work-orders.destroy', $bos))->assertRedirect(route('work-orders.index'));
+
+        $this->assertModelMissing($bos);
+        $this->assertModelExists($dolu);
     }
 
     public function test_fise_bagli_cari_kaydi_hareketlerden_degistirilemez(): void
     {
         $order = $this->giris();
-        $kayit = Transaction::first();
+        $this->cikis($order);
 
-        $this->actingAs($this->user)->get(route('transactions.edit', $kayit))
-            ->assertRedirect(route('work-orders.show', $order));
-        $this->actingAs($this->user)->delete(route('transactions.destroy', $kayit))
-            ->assertRedirect(route('work-orders.show', $order));
+        foreach (Transaction::all() as $kayit) {
+            $this->actingAs($this->user)->get(route('transactions.edit', $kayit))
+                ->assertRedirect(route('work-orders.show', $order));
+        }
 
-        $this->assertSame(1, Transaction::count());
+        $this->assertSame(TransactionType::CariAlacak, Transaction::first()->type);
     }
 
-    public function test_bilancoda_atolyedeki_has_gorunur(): void
+    public function test_bilancoda_atolyede_kalan_has_gorunur(): void
     {
-        $this->giris();
-        $has = Currency::firstWhere('code', 'HAS')->id;
+        $order = $this->giris();
+        $this->cikis($order, ['labor_rate' => '0']);
 
-        $ozet = Balances::summary()[$has];
+        $ozet = Balances::summary()[$this->birim('HAS')->id];
 
-        // Atölyede 117 has var, firmaya 117 has borçluyuz → net 0
-        $this->assertSame(117_000, $ozet['atolye']);
-        $this->assertSame(117_000, $ozet['borc']);
+        // Atölyede 40 gr × 0,585 = 23,4 has kaldı, firmaya 23,4 has borçluyuz → net 0
+        $this->assertSame(23_400, $ozet['atolye']);
+        $this->assertSame(23_400, $ozet['borc']);
         $this->assertSame(0, $ozet['net']);
     }
 
-    public function test_milyem_urune_gore_elle_girilir(): void
-    {
-        $order = $this->giris(['purity' => '0,595', 'gross_in' => '100']);
-
-        $this->assertSame('59.500', $order->has_in);
-    }
-
-    public function test_teslimde_fire_hesaplanir_ve_iscilik_cariye_islenir(): void
+    public function test_personel_cikis_silemez(): void
     {
         $order = $this->giris();
-
-        $this->teslim($order)->assertSessionHasNoErrors()->assertRedirect(route('work-orders.show', $order));
-        $order->refresh();
-
-        // 200 − 160 = 40 gr fire (%20), has: 40 × 0,585 = 23,4
-        $this->assertSame('40.000', $order->fire_gram);
-        $this->assertSame('23.400', $order->fire_has);
-        $this->assertSame('93.600', $order->has_out);
-        $this->assertSame(20.0, $order->fireRate());
-
-        // İşçilik: 160 gr × 15 TL = 2.400 TL, cariye borç
-        $this->assertSame('2400.000', $order->labor_total);
-        $transaction = $order->transaction;
-        $this->assertSame(TransactionType::CariBorc, $transaction->type);
-        $this->assertSame($this->firma->id, $transaction->account_id);
-        $this->assertSame('A00001', $transaction->document_no);
-        $this->assertSame(2_400_000, $this->firma->balances()[Currency::firstWhere('code', 'TRY')->id]);
-    }
-
-    public function test_iscilik_has_altin_olarak_da_alinabilir(): void
-    {
-        $order = $this->giris();
-        $has = Currency::firstWhere('code', 'HAS');
-
-        $this->teslim($order, ['labor_rate' => '0,02', 'labor_currency_id' => $has->id])->assertSessionHasNoErrors();
-
-        // 160 gr × 0,02 = 3,2 gr has işçilik
-        $this->assertSame(3_200, $this->firma->balances()[$has->id]);
-    }
-
-    public function test_teslim_duzeltilince_cari_kaydi_guncellenir(): void
-    {
-        $order = $this->giris();
-        $this->teslim($order);
-        $this->teslim($order, ['gross_out' => '170', 'labor_basis' => 'toplam', 'labor_rate' => '3.000,00']);
-
-        $order->refresh();
-
-        $this->assertSame('30.000', $order->fire_gram);
-        $this->assertSame(4, Transaction::count()); // giriş, teslim, fire, işçilik
-        $this->assertSame(0, $this->hasBakiye());
-        $this->assertSame(3_000_000, $this->firma->balances()[Currency::firstWhere('code', 'TRY')->id]);
-    }
-
-    public function test_iscilik_sifirsa_cariye_kayit_yapilmaz(): void
-    {
-        $order = $this->giris();
-        $this->teslim($order, ['labor_rate' => '0']);
-
-        $this->assertNull($order->fresh()->transaction_id);
-        $this->assertSame(3, Transaction::count()); // giriş, teslim, fire (işçilik yok)
-    }
-
-    public function test_teslim_geri_alinabilir(): void
-    {
-        $order = $this->giris();
-        $this->teslim($order);
-
-        $this->actingAs($this->user)->delete(route('work-orders.undeliver', $order))->assertRedirect();
-
-        $order->refresh();
-        $this->assertSame(WorkOrder::STATUS_ATOLYEDE, $order->status);
-        $this->assertNull($order->fire_gram);
-        $this->assertSame(1, Transaction::count()); // sadece giriş kaydı kalır
-        $this->assertSame(-117_000, $this->hasBakiye());
-    }
-
-    public function test_hatali_girisler_reddedilir(): void
-    {
-        $this->actingAs($this->user)->post(route('work-orders.store'), [
-            'account_id' => $this->firma->id,
-            'product' => 'Deneme',
-            'received_at' => '2026-09-01',
-            'gross_in' => '0',
-            'purity' => '1,5',
-        ])->assertSessionHasErrors(['gross_in', 'purity']);
-
-        $order = $this->giris();
-
-        $this->teslim($order, ['delivered_at' => '2026-08-01'])->assertSessionHasErrors('delivered_at');
-        $this->teslim($order, ['gross_out' => 'abc'])->assertSessionHasErrors('gross_out');
-    }
-
-    public function test_giris_duzenlenince_fire_yeniden_hesaplanir(): void
-    {
-        $order = $this->giris();
-        $this->teslim($order);
-
-        $this->actingAs($this->user)->put(route('work-orders.update', $order), [
-            'account_id' => $this->firma->id,
-            'product' => '14 ayar bilezik',
-            'received_at' => '2026-09-01',
-            'gross_in' => '210',
-            'purity' => '0,585',
-        ])->assertSessionHasNoErrors();
-
-        $this->assertSame('50.000', $order->fresh()->fire_gram);
-    }
-
-    public function test_personel_teslimi_geri_alamaz(): void
-    {
-        $order = $this->giris();
-        $this->teslim($order);
-
+        $this->cikis($order);
         $personel = User::factory()->create(['role' => User::ROLE_PERSONEL]);
 
-        $this->actingAs($personel)->delete(route('work-orders.undeliver', $order))->assertForbidden();
+        $this->actingAs($personel)
+            ->delete(route('work-orders.deliveries.destroy', [$order, $order->deliveries()->first()]))
+            ->assertForbidden();
     }
 
     public function test_atolye_sayfalari_acilir(): void
     {
-        $bekleyen = $this->giris();
-        $teslim = $this->giris(['product' => 'Yüzük']);
-        $this->teslim($teslim);
+        $acik = $this->giris();
+        $kapali = $this->giris(['product' => 'Yüzük']);
+        $this->cikis($kapali);
+        $this->actingAs($this->user)->post(route('work-orders.close', $kapali));
 
         $this->actingAs($this->user);
 
         $this->get(route('work-orders.index'))->assertOk()->assertSee('14 ayar bilezik')->assertDontSee('Yüzük');
-        $this->get(route('work-orders.index', ['durum' => 'teslim_edildi']))->assertOk()->assertSee('Yüzük');
+        $this->get(route('work-orders.index', ['durum' => 'tamamlandi']))->assertOk()->assertSee('Yüzük');
         $this->get(route('work-orders.create'))->assertOk();
-        $this->get(route('work-orders.show', $bekleyen))->assertOk()->assertSee('Teslim Et');
-        $this->get(route('work-orders.show', $teslim))->assertOk()->assertSee('40,000 gr');
-        $this->get(route('work-orders.edit', $teslim))->assertOk();
+        $this->get(route('work-orders.show', $acik))->assertOk()->assertSee('Yeni Çıkış');
+        $this->get(route('work-orders.show', $kapali))->assertOk()->assertSee('40,000 gr');
+        $this->get(route('work-orders.edit', $kapali))->assertOk();
     }
 }

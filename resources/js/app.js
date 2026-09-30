@@ -66,11 +66,11 @@ if (workOrderForm) {
     update();
 }
 
-// Atölye teslim formu: fire ve işçilik önizlemesi
+// Atölye çıkış formu: çıkan has, kalacak miktar ve işçilik önizlemesi
 const deliverForm = document.querySelector('[data-deliver-form]');
 
 if (deliverForm) {
-    const grossIn = Number(deliverForm.dataset.grossIn);
+    const remaining = Number(deliverForm.dataset.remaining);
     const purity = Number(deliverForm.dataset.purity);
     const out = deliverForm.querySelector('[data-gross-out]');
     const rate = deliverForm.querySelector('[data-labor-rate]');
@@ -82,16 +82,15 @@ if (deliverForm) {
         const option = currency.selectedOptions[0];
         const decimals = Number(option.dataset.decimals);
         const gramOut = parseNumber(out.value);
-        const fire = grossIn - gramOut;
 
         set('[data-labor-label]', basis === 'gram' ? 'Gram başı işçilik' : 'Toplam işçilik');
 
         if (gramOut > 0) {
-            set('[data-preview-fire]', formatNumber(fire));
-            set('[data-preview-rate]', '%' + formatNumber((fire / grossIn) * 100, 2));
-            set('[data-preview-fire-has]', formatNumber(fire * purity));
+            set('[data-preview-has]', formatNumber(gramOut * purity));
+            set('[data-preview-remaining]', formatNumber(remaining - gramOut));
         } else {
-            ['[data-preview-fire]', '[data-preview-rate]', '[data-preview-fire-has]'].forEach((s) => set(s, '—'));
+            set('[data-preview-has]', '—');
+            set('[data-preview-remaining]', formatNumber(remaining));
         }
 
         const rateValue = parseNumber(rate.value);

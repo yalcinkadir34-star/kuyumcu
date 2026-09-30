@@ -7,10 +7,12 @@ use App\Http\Requests\WorkOrderRequest;
 use App\Models\Account;
 use App\Models\Currency;
 use App\Models\WorkOrder;
+use App\Models\WorkOrderDelivery;
 use App\Support\Amount;
 use App\Support\Workshop;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class WorkOrderController extends Controller
@@ -18,7 +20,7 @@ class WorkOrderController extends Controller
     public function index(Request $request): View
     {
         $filters = $request->validate([
-            'durum' => ['nullable', 'in:atolyede,teslim_edildi,tumu'],
+            'durum' => ['nullable', 'in:atolyede,tamamlandi,tumu'],
             'cari' => ['nullable', 'integer'],
             'q' => ['nullable', 'string', 'max:100'],
             'baslangic' => ['nullable', 'date'],
@@ -27,7 +29,8 @@ class WorkOrderController extends Controller
         $status = $filters['durum'] ?? 'atolyede';
 
         $orders = WorkOrder::query()
-            ->with(['account', 'laborCurrency'])
+            ->with('account')
+            ->withDeliveryTotals()
             ->when($status !== 'tumu', fn ($q) => $q->where('status', $status))
             ->when($filters['cari'] ?? null, fn ($q, $id) => $q->where('account_id', $id))
             ->when($filters['baslangic'] ?? null, fn ($q, $d) => $q->where('received_at', '>=', $d))
@@ -78,26 +81,21 @@ class WorkOrderController extends Controller
 
     public function show(WorkOrder $workOrder): View
     {
-        $workOrder->load(['account', 'laborCurrency', 'transaction', 'creator']);
+        $workOrder->load(['account', 'creator', 'deliveries.laborCurrency']);
 
-        // Teslim formu için varsayılanlar: bu firmanın son işçilik ayarı
-        $lastDelivered = WorkOrder::query()
-            ->where('account_id', $workOrder->account_id)
-            ->where('status', WorkOrder::STATUS_TESLIM)
-            ->where('id', '!=', $workOrder->id)
-            ->latest('delivered_at')
+        // Çıkış formu için varsayılanlar: bu firmanın son çıkışındaki işçilik ayarı
+        $last = WorkOrderDelivery::query()
+            ->whereHas('workOrder', fn ($q) => $q->where('account_id', $workOrder->account_id))
+            ->latest('id')
             ->first();
 
         return view('work-orders.show', [
             'order' => $workOrder,
             'currencies' => Currency::activeList(),
             'defaults' => [
-                'fire_bearer' => $workOrder->fire_bearer ?? $lastDelivered?->fire_bearer ?? WorkOrder::FIRE_FIRMA,
-                'labor_basis' => $workOrder->labor_basis ?? $lastDelivered?->labor_basis ?? 'gram',
-                'labor_rate' => $workOrder->labor_rate ?? $lastDelivered?->labor_rate,
-                'labor_currency_id' => $workOrder->labor_currency_id
-                    ?? $lastDelivered?->labor_currency_id
-                    ?? Currency::firstWhere('code', 'TRY')?->id,
+                'labor_basis' => $last?->labor_basis ?? 'gram',
+                'labor_rate' => $last?->labor_rate,
+                'labor_currency_id' => $last?->labor_currency_id ?? Currency::firstWhere('code', 'TRY')?->id,
             ],
         ]);
     }
@@ -109,50 +107,79 @@ class WorkOrderController extends Controller
 
     public function update(WorkOrderRequest $request, WorkOrder $workOrder): RedirectResponse
     {
-        $workOrder->fill($request->orderData());
+        $data = $request->orderData();
+
+        if (Amount::toMilli($data['gross_in']) < $workOrder->deliveredMilli()) {
+            return back()->withInput()->withErrors(['gross_in' => 'Giriş gramı, yapılmış çıkışların toplamından az olamaz.']);
+        }
+
+        $workOrder->fill($data);
         $workOrder->saveWithTransactions($request->user());
 
         return redirect()->route('work-orders.show', $workOrder)
             ->with('success', 'Giriş bilgileri güncellendi, cari has kayıtları yeniden hesaplandı.');
     }
 
+    /** Yeni çıkış (parçalı teslim). */
     public function deliver(DeliverWorkOrderRequest $request, WorkOrder $workOrder): RedirectResponse
     {
-        $wasDelivered = $workOrder->isDelivered();
-        $workOrder->deliver($request->deliveryData(), $request->user());
+        $delivery = $workOrder->addDelivery($request->deliveryData(), $request->user());
+        $gr = new Currency(['symbol' => 'gr', 'decimals' => 3]);
 
-        $message = $wasDelivered ? 'Teslim bilgileri güncellendi.' : "{$workOrder->number} teslim edildi.";
-        $message .= ' Cariye işlendi: '.Amount::format($workOrder->has_out, Currency::firstWhere('code', 'HAS')).' has teslim';
+        $message = 'Çıkış kaydedildi: '.Amount::format($delivery->gross_out, $gr)
+            .'. Cariye işlendi: '.Amount::format($delivery->has_out, $gr).' has';
 
-        if ($workOrder->fire_bearer === WorkOrder::FIRE_FIRMA && $workOrder->fire_transaction_id) {
-            $message .= ', '.Amount::format($workOrder->fire_has, Currency::firstWhere('code', 'HAS')).' has fire';
+        if ($delivery->labor_transaction_id) {
+            $message .= ' ve '.Amount::format($delivery->labor_total, $delivery->laborCurrency).' işçilik';
         }
 
-        if ($workOrder->transaction_id) {
-            $message .= ', '.Amount::format($workOrder->labor_total, $workOrder->laborCurrency).' işçilik';
-        }
-
-        $message .= '.';
+        $workOrder->unsetRelation('deliveries');
+        $message .= '. Atölyede kalan: '.Amount::formatMilli($workOrder->remainingMilli(), $gr).'.';
 
         return redirect()->route('work-orders.show', $workOrder)->with('success', $message);
     }
 
-    public function undeliver(Request $request, WorkOrder $workOrder): RedirectResponse
+    public function destroyDelivery(Request $request, WorkOrder $workOrder, WorkOrderDelivery $delivery): RedirectResponse
     {
         abort_unless($request->user()->isAdmin(), 403);
 
-        $workOrder->undeliver();
+        DB::transaction(function () use ($workOrder, $delivery) {
+            $delivery->delete();
+
+            if ($workOrder->isClosed()) {
+                $workOrder->reopen();
+            }
+        });
 
         return redirect()->route('work-orders.show', $workOrder)
-            ->with('success', 'Teslim geri alındı, ürün tekrar atölyede. Teslim, fire ve işçilik cari kayıtları silindi.');
+            ->with('success', 'Çıkış silindi, cari kayıtları geri alındı.');
+    }
+
+    /** Fişi kapat: atölyede kalan miktar fire sayılır (cariye işlenmez). */
+    public function close(WorkOrder $workOrder): RedirectResponse
+    {
+        $workOrder->close();
+
+        return redirect()->route('work-orders.show', $workOrder)
+            ->with('success', "{$workOrder->number} kapatıldı.");
+    }
+
+    public function reopen(Request $request, WorkOrder $workOrder): RedirectResponse
+    {
+        abort_unless($request->user()->isAdmin(), 403);
+
+        $workOrder->reopen();
+
+        return redirect()->route('work-orders.show', $workOrder)
+            ->with('success', "{$workOrder->number} tekrar atölyede.");
     }
 
     public function destroy(Request $request, WorkOrder $workOrder): RedirectResponse
     {
         abort_unless($request->user()->isAdmin(), 403);
 
-        if ($workOrder->isDelivered()) {
-            return back()->with('error', 'Teslim edilmiş fiş silinemez. Önce teslimi geri alın.');
+        if ($workOrder->deliveries()->exists()) {
+            return back()->with('error', 'Çıkışı olan fiş silinemez. Önce çıkışları silin.');
         }
 
         $workOrder->delete();
@@ -176,29 +203,39 @@ class WorkOrderController extends Controller
         ];
     }
 
-    /** Özet kartları: atölyedeki ürünler ve bu ayın fire/işçilik toplamları. */
+    /** Özet kartları: atölyede kalan, bu ayın çıkışları ve kapanan fişlerin firesi. */
     private function summary(): array
     {
-        $inWorkshop = WorkOrder::query()->inWorkshop()
-            ->selectRaw('COUNT(*) as adet, COALESCE(SUM(gross_in), 0) as gram, COALESCE(SUM(has_in), 0) as has')
+        $open = WorkOrder::query()->inWorkshop()->withDeliveryTotals()->get();
+
+        $monthStart = now()->startOfMonth()->toDateString();
+        $monthEnd = now()->endOfMonth()->toDateString();
+
+        $monthOut = WorkOrderDelivery::query()
+            ->whereBetween('delivered_at', [$monthStart, $monthEnd])
+            ->selectRaw('COUNT(*) as adet, COALESCE(SUM(gross_out), 0) as gram, COALESCE(SUM(has_out), 0) as has')
             ->toBase()->first();
 
-        $month = WorkOrder::query()
-            ->where('status', WorkOrder::STATUS_TESLIM)
-            ->whereBetween('delivered_at', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
-            ->selectRaw('COUNT(*) as adet, COALESCE(SUM(gross_in), 0) as giris, COALESCE(SUM(fire_gram), 0) as fire, COALESCE(SUM(fire_has), 0) as fire_has')
-            ->toBase()->first();
+        $closed = WorkOrder::query()
+            ->where('status', WorkOrder::STATUS_TAMAMLANDI)
+            ->whereBetween('closed_at', [$monthStart, $monthEnd])
+            ->withDeliveryTotals()
+            ->get();
 
-        $fireMilli = Amount::toMilli($month->fire);
+        $fire = $closed->sum(fn (WorkOrder $o) => $o->remainingMilli());
+        $closedIn = $closed->sum(fn (WorkOrder $o) => Amount::toMilli($o->gross_in));
 
         return [
-            'atolyede_adet' => (int) $inWorkshop->adet,
-            'atolyede_gram' => Amount::toMilli($inWorkshop->gram),
-            'atolyede_has' => Amount::toMilli($inWorkshop->has),
-            'ay_adet' => (int) $month->adet,
-            'ay_fire' => $fireMilli,
-            'ay_fire_has' => Amount::toMilli($month->fire_has),
-            'ay_fire_orani' => Workshop::fireRate($fireMilli, Amount::toMilli($month->giris)),
+            'atolyede_adet' => $open->count(),
+            'atolyede_gram' => $open->sum(fn (WorkOrder $o) => $o->remainingMilli()),
+            'atolyede_has' => $open->sum(fn (WorkOrder $o) => $o->remainingHasMilli()),
+            'ay_cikis_adet' => (int) $monthOut->adet,
+            'ay_cikis_gram' => Amount::toMilli($monthOut->gram),
+            'ay_cikis_has' => Amount::toMilli($monthOut->has),
+            'ay_kapanan' => $closed->count(),
+            'ay_fire' => $fire,
+            'ay_fire_has' => $closed->sum(fn (WorkOrder $o) => $o->remainingHasMilli()),
+            'ay_fire_orani' => Workshop::fireRate($fire, $closedIn),
         ];
     }
 }

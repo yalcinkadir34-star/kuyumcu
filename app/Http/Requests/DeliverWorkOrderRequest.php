@@ -9,7 +9,7 @@ use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/** Atölye çıkışı: tartıdaki net gram ve işçilik. */
+/** Atölyeden çıkış: tartıdaki gram ve işçilik. Bir fişin birden fazla çıkışı olabilir. */
 class DeliverWorkOrderRequest extends FormRequest
 {
     public function authorize(): bool
@@ -19,20 +19,23 @@ class DeliverWorkOrderRequest extends FormRequest
 
     public function rules(): array
     {
+        /** @var WorkOrder $order */
         $order = $this->route('workOrder');
 
         return [
             'delivered_at' => ['required', 'date', 'after_or_equal:'.$order->received_at->toDateString()],
-            'gross_out' => ['required', function (string $attribute, mixed $value, Closure $fail) {
+            'gross_out' => ['required', function (string $attribute, mixed $value, Closure $fail) use ($order) {
                 $parsed = Amount::parse((string) $value);
 
                 if ($parsed === null || Amount::toMilli($parsed) <= 0) {
-                    $fail('Çıkış gramı geçersiz. Örnek: 160 veya 160,250');
+                    $fail('Çıkış gramı geçersiz. Örnek: 6,97 veya 160');
                 } elseif (Amount::decimalsOf($parsed) > 3) {
                     $fail('Gram en fazla 3 ondalık basamak olabilir.');
+                } elseif (Amount::toMilli($parsed) > $order->remainingMilli()) {
+                    $kalan = Amount::formatMilli($order->remainingMilli(), new Currency(['symbol' => 'gr', 'decimals' => 3]));
+                    $fail("Çıkış, atölyede kalan miktardan ({$kalan}) fazla olamaz.");
                 }
             }],
-            'fire_bearer' => ['required', Rule::in([WorkOrder::FIRE_FIRMA, WorkOrder::FIRE_ATOLYE])],
             'labor_basis' => ['required', Rule::in(['gram', 'toplam'])],
             'labor_currency_id' => ['required', Rule::exists('currencies', 'id')->where('is_active', true)],
             'labor_rate' => ['required', function (string $attribute, mixed $value, Closure $fail) {
@@ -50,6 +53,7 @@ class DeliverWorkOrderRequest extends FormRequest
                     $fail("{$currency->name} için en fazla {$currency->decimals} ondalık basamak girilebilir.");
                 }
             }],
+            'notes' => ['nullable', 'string', 'max:255'],
         ];
     }
 
@@ -58,10 +62,10 @@ class DeliverWorkOrderRequest extends FormRequest
         return [
             'delivered_at' => 'çıkış tarihi',
             'gross_out' => 'çıkış gramı',
-            'fire_bearer' => 'fireyi üstlenen',
             'labor_basis' => 'işçilik tipi',
             'labor_currency_id' => 'işçilik birimi',
             'labor_rate' => 'işçilik',
+            'notes' => 'not',
         ];
     }
 

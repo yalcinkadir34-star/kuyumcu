@@ -28,8 +28,12 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::resource('atolye', WorkOrderController::class)
         ->names('work-orders')
         ->parameters(['atolye' => 'workOrder']);
-    Route::post('/atolye/{workOrder}/teslim', [WorkOrderController::class, 'deliver'])->name('work-orders.deliver');
-    Route::delete('/atolye/{workOrder}/teslim', [WorkOrderController::class, 'undeliver'])->name('work-orders.undeliver');
+    Route::post('/atolye/{workOrder}/cikis', [WorkOrderController::class, 'deliver'])->name('work-orders.deliver');
+    Route::delete('/atolye/{workOrder}/cikis/{delivery}', [WorkOrderController::class, 'destroyDelivery'])
+        ->scopeBindings()
+        ->name('work-orders.deliveries.destroy');
+    Route::post('/atolye/{workOrder}/kapat', [WorkOrderController::class, 'close'])->name('work-orders.close');
+    Route::delete('/atolye/{workOrder}/kapat', [WorkOrderController::class, 'reopen'])->name('work-orders.reopen');
 
     Route::resource('hareketler', TransactionController::class)
         ->except('show')
