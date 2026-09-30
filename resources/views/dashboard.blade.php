@@ -3,58 +3,106 @@
 @section('title', 'Ana Sayfa')
 
 @section('content')
-    <div class="mb-6">
-        <h2 class="text-2xl font-semibold text-stone-900">Merhaba, {{ auth()->user()->name }}</h2>
-        <p class="mt-1 text-sm text-stone-500">{{ $today }}</p>
+    @use('App\Support\Amount')
+
+    <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-semibold text-stone-900">Merhaba, {{ auth()->user()->name }}</h2>
+            <p class="mt-1 text-sm text-stone-500">{{ $today }}</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ route('transactions.create', ['tur' => 'tahsilat']) }}" class="btn btn-gold">+ Tahsilat</a>
+            <a href="{{ route('transactions.create', ['tur' => 'odeme']) }}" class="btn btn-secondary">+ Ödeme</a>
+            <a href="{{ route('accounts.create') }}" class="btn btn-secondary">+ Yeni Cari</a>
+        </div>
     </div>
 
     {{-- Özet kartları --}}
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         @foreach ($stats as $stat)
-            <div class="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
+            <div class="card p-5">
                 <div class="text-sm font-medium text-stone-500">{{ $stat['label'] }}</div>
-                <div class="mt-2 text-3xl font-semibold tabular-nums text-stone-900">
-                    {{ $stat['value'] ?? '—' }}
+                <div class="mt-2 text-2xl font-semibold tabular-nums text-stone-900">
+                    @if (array_key_exists('milli', $stat))
+                        <x-kasa-bakiye :milli="$stat['milli']" :currency="$stat['currency']" />
+                    @else
+                        {{ $stat['value'] }}
+                    @endif
                 </div>
                 <div class="mt-2 text-xs text-stone-400">{{ $stat['hint'] }}</div>
             </div>
         @endforeach
     </div>
 
-    <div class="mt-6 grid gap-4 lg:grid-cols-3">
-        {{-- Son hareketler --}}
-        <div class="rounded-xl border border-stone-200 bg-white shadow-sm lg:col-span-2">
-            <div class="border-b border-stone-200 px-5 py-4">
-                <h3 class="font-semibold text-stone-900">Son Hareketler</h3>
-            </div>
-            <div class="flex flex-col items-center justify-center px-5 py-14 text-center">
-                <div class="flex size-12 items-center justify-center rounded-full bg-stone-100 text-stone-400">
-                    <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
-                </div>
-                <p class="mt-3 font-medium text-stone-700">Henüz hareket yok</p>
-                <p class="mt-1 max-w-sm text-sm text-stone-500">Cari ve kasa modülleri eklendiğinde son işlemler burada listelenecek.</p>
+    {{-- Genel bilanço --}}
+    <div class="card mt-6 overflow-hidden">
+        <div class="card-header">
+            <div>
+                <h3 class="font-semibold text-stone-900">Genel Bilanço</h3>
+                <p class="text-xs text-stone-500">Net durum = Kasa mevcudu + Carilerden alacaklar − Carilere borçlar</p>
             </div>
         </div>
+        <div class="overflow-x-auto">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Birim</th>
+                        <th class="text-right">Kasa Mevcudu</th>
+                        <th class="text-right">Alacaklarımız</th>
+                        <th class="text-right">Borçlarımız</th>
+                        <th class="text-right">Net Durum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($currencies as $currency)
+                        @php $row = $summary[$currency->id] ?? ['kasa' => 0, 'alacak' => 0, 'borc' => 0, 'net' => 0]; @endphp
+                        <tr>
+                            <td class="font-medium text-stone-900">{{ $currency->name }}</td>
+                            <td class="text-right"><x-kasa-bakiye :milli="$row['kasa']" :currency="$currency" /></td>
+                            <td class="text-right tabular-nums {{ $row['alacak'] ? 'text-amber-700' : 'text-stone-400' }}">{{ Amount::formatMilli($row['alacak'], $currency) }}</td>
+                            <td class="text-right tabular-nums {{ $row['borc'] ? 'text-sky-700' : 'text-stone-400' }}">{{ Amount::formatMilli($row['borc'], $currency) }}</td>
+                            <td class="text-right text-base"><x-kasa-bakiye :milli="$row['net']" :currency="$currency" class="font-semibold" /></td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-        {{-- Sistem bilgisi --}}
-        <div class="rounded-xl border border-stone-200 bg-white shadow-sm">
-            <div class="border-b border-stone-200 px-5 py-4">
-                <h3 class="font-semibold text-stone-900">Oturum Bilgisi</h3>
-            </div>
-            <dl class="divide-y divide-stone-100 text-sm">
-                <div class="flex justify-between px-5 py-3">
-                    <dt class="text-stone-500">Kullanıcı</dt>
-                    <dd class="font-medium text-stone-900">{{ auth()->user()->username }}</dd>
-                </div>
-                <div class="flex justify-between px-5 py-3">
-                    <dt class="text-stone-500">Yetki</dt>
-                    <dd class="font-medium text-stone-900">{{ auth()->user()->roleLabel() }}</dd>
-                </div>
-                <div class="flex justify-between px-5 py-3">
-                    <dt class="text-stone-500">Son giriş</dt>
-                    <dd class="font-medium text-stone-900">{{ auth()->user()->last_login_at?->format('d.m.Y H:i') ?? '—' }}</dd>
-                </div>
-            </dl>
+    {{-- Son hareketler --}}
+    <div class="card mt-6 overflow-hidden">
+        <div class="card-header">
+            <h3 class="font-semibold text-stone-900">Son Hareketler</h3>
+            <a href="{{ route('transactions.index') }}" class="text-sm font-medium text-gold-700 hover:underline">Tümü →</a>
         </div>
+        @if ($recent->isEmpty())
+            <div class="px-5 py-12 text-center text-sm text-stone-500">
+                Henüz hareket yok. <a href="{{ route('transactions.create') }}" class="font-medium text-gold-700 hover:underline">İlk hareketi girin</a>.
+            </div>
+        @else
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <tbody>
+                        @foreach ($recent as $transaction)
+                            <tr>
+                                <td class="w-28 whitespace-nowrap text-stone-500">{{ $transaction->date->format('d.m.Y') }}</td>
+                                <td class="w-44"><span class="badge {{ $transaction->type->badgeClass() }}">{{ $transaction->type->label() }}</span></td>
+                                <td>
+                                    @if ($transaction->account)
+                                        <a href="{{ route('accounts.show', $transaction->account) }}" class="font-medium text-stone-900 hover:text-gold-700">{{ $transaction->account->name }}</a>
+                                    @else
+                                        <span class="text-stone-600">{{ $transaction->cashRegister?->name }}</span>
+                                    @endif
+                                    @if ($transaction->description)
+                                        <span class="text-stone-400">· {{ $transaction->description }}</span>
+                                    @endif
+                                </td>
+                                <td class="text-right font-medium tabular-nums whitespace-nowrap">{{ Amount::format($transaction->amount, $transaction->currency) }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
     </div>
 @endsection

@@ -2,6 +2,7 @@
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
+@source '../../app/Enums/*.php';
 
 @theme {
     --font-sans: 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -17,4 +18,71 @@
     --color-gold-700: #7d5520;
     --color-gold-800: #684620;
     --color-gold-900: #583b1f;
+}
+
+/* Tekrar eden arayüz parçaları */
+@layer components {
+    .card {
+        @apply rounded-xl border border-stone-200 bg-white shadow-sm;
+    }
+
+    .card-header {
+        @apply flex items-center justify-between gap-3 border-b border-stone-200 px-5 py-4;
+    }
+
+    .label {
+        @apply mb-1.5 block text-sm font-medium text-stone-700;
+    }
+
+    .input {
+        @apply block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 shadow-sm outline-none transition focus:border-gold-500 focus:ring-4 focus:ring-gold-500/15;
+    }
+
+    .input-error {
+        @apply border-red-400 focus:border-red-500 focus:ring-red-500/15;
+    }
+
+    .field-error {
+        @apply mt-1 text-xs text-red-600;
+    }
+
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium whitespace-nowrap transition focus:outline-none focus:ring-4;
+    }
+
+    .btn-primary {
+        @apply bg-stone-900 text-white shadow-sm hover:bg-stone-800 focus:ring-gold-500/30;
+    }
+
+    .btn-gold {
+        @apply bg-gold-500 text-white shadow-sm hover:bg-gold-600 focus:ring-gold-500/30;
+    }
+
+    .btn-secondary {
+        @apply border border-stone-300 bg-white text-stone-700 shadow-sm hover:bg-stone-50 focus:ring-stone-500/10;
+    }
+
+    .btn-danger {
+        @apply border border-red-200 bg-white text-red-600 hover:bg-red-50 focus:ring-red-500/15;
+    }
+
+    .table {
+        @apply w-full text-left text-sm;
+    }
+
+    .table th {
+        @apply border-b border-stone-200 bg-stone-50 px-4 py-2.5 text-xs font-semibold tracking-wide text-stone-500 uppercase;
+    }
+
+    .table td {
+        @apply border-b border-stone-100 px-4 py-3 align-middle;
+    }
+
+    .table tbody tr:hover td {
+        @apply bg-stone-50/60;
+    }
+
+    .badge {
+        @apply inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset;
+    }
 }

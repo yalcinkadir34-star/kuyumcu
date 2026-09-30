@@ -1,1 +1,0 @@
-document.addEventListener(`click`,e=>{e.target.closest(`[data-sidebar-toggle]`)&&(document.getElementById(`sidebar`)?.classList.toggle(`-translate-x-full`),document.getElementById(`sidebar-backdrop`)?.classList.toggle(`hidden`))});

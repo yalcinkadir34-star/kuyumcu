@@ -1,9 +1,11 @@
 @php
     // Yan menü. 'route' => null olan modüller henüz geliştirilmedi.
+    // 'active': hangi sayfalarda bu menünün seçili görüneceği.
     $menu = [
-        ['label' => 'Ana Sayfa', 'route' => 'dashboard', 'icon' => 'M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10'],
-        ['label' => 'Cariler', 'route' => null, 'icon' => 'M16 19v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 10a3 3 0 100-6 3 3 0 000 6zM22 19v-1a4 4 0 00-3-3.87M16 4.13a3 3 0 010 5.74'],
-        ['label' => 'Kasa', 'route' => null, 'icon' => 'M3 7h18v12H3zM3 7l2-3h14l2 3M12 11v4M10 13h4'],
+        ['label' => 'Ana Sayfa', 'route' => 'dashboard', 'active' => 'dashboard', 'icon' => 'M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10'],
+        ['label' => 'Cariler', 'route' => 'accounts.index', 'active' => 'accounts.*', 'icon' => 'M16 19v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 10a3 3 0 100-6 3 3 0 000 6zM22 19v-1a4 4 0 00-3-3.87M16 4.13a3 3 0 010 5.74'],
+        ['label' => 'Kasalar', 'route' => 'cash-registers.index', 'active' => 'cash-registers.*', 'icon' => 'M3 7h18v12H3zM3 7l2-3h14l2 3M12 11v4M10 13h4'],
+        ['label' => 'Hareketler', 'route' => 'transactions.index', 'active' => 'transactions.*', 'icon' => 'M7 4v16M7 4L3 8M7 4l4 4M17 20V4M17 20l-4-4M17 20l4-4'],
         ['label' => 'Atölye', 'route' => null, 'icon' => 'M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z'],
         ['label' => 'Stok', 'route' => null, 'icon' => 'M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8'],
         ['label' => 'Raporlar', 'route' => null, 'icon' => 'M4 20V10M10 20V4M16 20v-7M22 20H2'],
@@ -33,7 +35,7 @@
         <nav class="flex-1 space-y-1 overflow-y-auto p-3">
             @foreach ($menu as $item)
                 @if ($item['route'])
-                    @php $active = request()->routeIs($item['route']); @endphp
+                    @php $active = request()->routeIs($item['active']); @endphp
                     <a href="{{ route($item['route']) }}"
                        @class([
                            'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition',
@@ -54,7 +56,7 @@
         </nav>
 
         <div class="border-t border-white/5 p-4 text-xs text-stone-500">
-            Sürüm 0.1
+            Sürüm 0.2
         </div>
     </aside>
 
@@ -85,6 +87,7 @@
         </header>
 
         <main class="p-4 sm:p-6">
+            <x-flash />
             @yield('content')
         </main>
     </div>

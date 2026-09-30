@@ -5,7 +5,7 @@
 > Her geliştirmeden sonra güncellenir ve commit edilir.
 
 **Son güncelleme:** 30.09.2026
-**Mevcut sürüm:** 0.1: Altyapı, giriş ve ana sayfa
+**Mevcut sürüm:** 0.2: Cari hesaplar, kasalar ve genel bilanço
 
 ---
 
@@ -126,6 +126,63 @@ sunucuda sadece `git pull` + `composer install` yeterli olur.
 - İlk push kullanıcı tarafından Git Bash'ten yapıldı. GitHub girişi Windows'a (Git Credential Manager) kaydedildi, sonraki push'lar otomatik
 - Commit yazarı "Kadir &lt;yalcinkadir34@gmail.com&gt;" olarak ayarlandı (sadece bu projede)
 
+### ✅ v0.2: Cari, Kasa ve Genel Bilanço (30.09.2026)
+
+**Temel tasarım kararı: çok birimli hesap**
+Kuyumculukta hesap sadece TL değil. Her cari ve kasa **her birim için ayrı bakiye** tutar.
+Birimler `currencies` tablosunda: **TRY** (2 ondalık), **USD**, **EUR**, **HAS** (has altın, gram, 3 ondalık).
+Yeni birim (ör. 22 ayar, gümüş) eklemek için tabloya satır eklemek yeterli.
+
+**Hareket (işlem) mantığı**: tek tablo `transactions`
+- Tutar her zaman pozitif. Cariye ve kasaya etkisi `account_direction` / `cash_direction` alanlarında (+1 / −1 / 0)
+- Bakiye = `SUM(tutar × yön)`. Yönler hareket türünden **otomatik** hesaplanır (`app/Enums/TransactionType.php`)
+
+| İşlem türü | Cari | Kasa | Örnek |
+|---|---|---|---|
+| Tahsilat | alacaklanır (borcu azalır) | + giriş | Müşteri borcunu ödedi |
+| Ödeme | borçlanır | − çıkış | Tedarikçiye ödeme yaptık |
+| Cari Borçlandırma | borçlanır | — | Veresiye satış, işçilik bedeli |
+| Cari Alacaklandırma | alacaklanır | — | Cariden emanet/alış |
+| Kasa Giriş | — | + giriş | Cari dışı gelir |
+| Kasa Çıkış | — | − çıkış | Kira, fatura, gider |
+
+**Bakiye yorumu (cari):** pozitif = **B (Borçlu)**, cari bize borçlu. Negatif = **A (Alacaklı)**, biz cariye borçluyuz.
+
+**Hassasiyet:** Veritabanında `decimal(18,3)`. PHP'de hesaplar "binde bir" birimli tam sayılarla yapılıyor
+(`app/Support/Amount.php`), yani kuruş/miligram kayması yok.
+**Tutar girişi:** Türk biçimi, `1.250,50` / `2,5` / `12,345`. Belirsiz olan `1.500` reddedilir
+(bin beş yüz mü, bir buçuk mu anlaşılmaz). Birimin ondalık sınırı kontrol edilir (TL'de en fazla 2 hane).
+
+**Ekranlar**
+- **Cariler** (`/cariler`): arama, tür/durum filtresi, her birim için bakiye sütunu (B/A işaretli)
+- **Cari detay**: birim bazında bakiye kartları, hızlı işlem butonları, **cari ekstre**
+  (tarih aralığı, devreden bakiye, yürüyen bakiye, dönem sonu bakiyesi)
+- **Kasalar** (`/kasalar`): nakit/banka/POS, birim bazında mevcut, toplam satırı, kasa hareketleri ekstresi
+  - Varsayılan olarak **Merkez Kasa** oluşturuldu
+- **Hareketler** (`/hareketler`): tüm işlemler, filtreleme, düzenleme. İşlem formu türe göre cari/kasa alanlarını gösterip gizliyor
+  - "Kaydet ve Yeni" ile art arda giriş yapılabiliyor
+- **Ana sayfa:** aktif cari sayısı, kasa TL ve has mevcudu, bugünkü işlem sayısı, **Genel Bilanço**, son hareketler
+  - **Genel Bilanço:** her birim için Kasa + Alacaklarımız − Borçlarımız = **Net Durum**
+
+**Yetkiler**
+- Cari/kasa/hareket ekleme ve düzenleme: tüm kullanıcılar
+- Silme: sadece **Yönetici**. Hareketi olan cari/kasa silinemez, pasif yapılır
+
+**Teknik**
+- Yeni tablolar: `currencies`, `accounts`, `cash_registers`, `transactions`
+- Adresler Türkçe: `/cariler/yeni`, `/cariler/5/duzenle` (`AppServiceProvider` → `resourceVerbs`)
+- Türkçe doğrulama mesajları: `lang/tr/validation.php`, sayfalama: `lang/tr.json`
+- Ortak CSS sınıfları (`.card`, `.btn`, `.input`, `.table`, `.badge`): `resources/css/app.css`
+- Testler: `tests/Unit/AmountTest.php`, `tests/Feature/CariKasaTest.php` (toplam 38 test, hepsi geçiyor)
+
+| Dosya | Görevi |
+|---|---|
+| `app/Enums/TransactionType.php` | İşlem türleri ve cari/kasa etkileri |
+| `app/Support/Amount.php` | Tutar okuma/biçimlendirme, hassas hesap |
+| `app/Support/Balances.php` | Cari/kasa bakiyeleri ve genel bilanço sorguları |
+| `app/Support/Ledger.php` | Ekstre (devir + yürüyen bakiye) |
+| `resources/views/partials/ledger.blade.php` | Cari ve kasa ekstresi tablosu |
+
 ---
 
 ## 5. Yapılacaklar
@@ -134,13 +191,16 @@ sunucuda sadece `git pull` + `composer install` yeterli olur.
 Aşağıdaki modüller menüde yer tutucu olarak var. Kapsamları kullanıcıyla netleştirilecek.
 Kuyumculuk sektörü için **öneri** niteliğindeki başlıklar:
 
-- [ ] **Cariler**: müşteri/tedarikçi kartları; TL, döviz ve **has altın** bazında bakiye; cari ekstre
-- [ ] **Kasa**: TL / döviz / altın kasaları, tahsilat-ödeme hareketleri
+- [x] **Cariler**: müşteri/tedarikçi kartları; TL, döviz ve **has altın** bazında bakiye; cari ekstre (v0.2)
+- [x] **Kasa**: TL / döviz / altın kasaları, tahsilat-ödeme hareketleri (v0.2)
+- [ ] Kasalar arası virman (transfer)
+- [ ] Döviz/altın bozdurma (bir birimden diğerine çevirme)
+- [ ] Cari ekstre yazdırma / PDF
 - [ ] **Atölye**: iş emirleri (müşteriden gelen maden, ayar, milyem, fire, işçilik), teslim alma/verme
 - [ ] **Stok**: ürün/hammadde, gram ve ayar bazında takip
 - [ ] **Raporlar**: günlük özet, cari bakiye listesi, has altın durumu
 - [ ] **Ayarlar**: kullanıcı yönetimi (personel ekleme, pasif etme, şifre değiştirme), firma bilgileri, altın kurları
-- [ ] Dashboard kartlarını gerçek verilerle doldurmak
+- [x] Dashboard kartlarını gerçek verilerle doldurmak (v0.2)
 
 ### 🚀 Sunucuya taşıma (ileride)
 - [ ] Sunucu tipine karar ver (paylaşımlı hosting / VPS)

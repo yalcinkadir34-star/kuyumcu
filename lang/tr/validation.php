@@ -1,0 +1,46 @@
+<?php
+
+return [
+    'accepted' => ':attribute kabul edilmelidir.',
+    'boolean' => ':attribute alanı evet veya hayır olmalıdır.',
+    'date' => ':attribute geçerli bir tarih olmalıdır.',
+    'email' => ':attribute geçerli bir e-posta adresi olmalıdır.',
+    'enum' => 'Seçilen :attribute geçersiz.',
+    'exists' => 'Seçilen :attribute geçersiz.',
+    'in' => 'Seçilen :attribute geçersiz.',
+    'integer' => ':attribute tam sayı olmalıdır.',
+    'max' => [
+        'numeric' => ':attribute en fazla :max olabilir.',
+        'string' => ':attribute en fazla :max karakter olabilir.',
+    ],
+    'min' => [
+        'numeric' => ':attribute en az :min olmalıdır.',
+        'string' => ':attribute en az :min karakter olmalıdır.',
+    ],
+    'numeric' => ':attribute sayı olmalıdır.',
+    'required' => ':attribute alanı zorunludur.',
+    'required_if' => ':attribute alanı zorunludur.',
+    'string' => ':attribute metin olmalıdır.',
+    'unique' => 'Bu :attribute zaten kullanılıyor.',
+
+    'attributes' => [
+        'type' => 'tür',
+        'name' => 'ad',
+        'contact_person' => 'yetkili kişi',
+        'phone' => 'telefon',
+        'email' => 'e-posta',
+        'tax_office' => 'vergi dairesi',
+        'tax_number' => 'vergi numarası',
+        'address' => 'adres',
+        'notes' => 'notlar',
+        'date' => 'tarih',
+        'account_id' => 'cari',
+        'cash_register_id' => 'kasa',
+        'currency_id' => 'birim',
+        'amount' => 'tutar',
+        'document_no' => 'belge no',
+        'description' => 'açıklama',
+        'username' => 'kullanıcı adı',
+        'password' => 'şifre',
+    ],
+];
