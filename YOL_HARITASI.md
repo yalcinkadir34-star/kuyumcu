@@ -242,6 +242,46 @@ Yeni birim (ör. 22 ayar, gümüş) eklemek için tabloya satır eklemek yeterli
 - Veritabanında milyem `decimal(5,4)`, gramlar `decimal(12,3)`
 - Testler: `tests/Unit/WorkshopTest.php`, `tests/Feature/AtolyeTest.php` (toplam 61 test, hepsi geçiyor)
 
+> ⚠️ v0.3 ve v0.3.1'deki tek seferlik "teslim", "fire kaydı" ve "fireyi kim üstleniyor" yapısı
+> v0.3.2'de **kaldırıldı**. Güncel mantık aşağıda.
+
+### ✅ v0.3.2: Parçalı çıkış, fire cariye işlenmiyor (01.10.2026)
+
+**Kullanıcı geri bildirimi:** "Sadece yapılan işlemin giriş-çıkışını yapacağız, fire işlemini yapmayacağız.
+26,25 giriş oldu, 6,97 çıkış oldu, aradaki kalan atölyede kalacak."
+
+**Güncel atölye mantığı**
+- Bir giriş fişinden **birden fazla çıkış** yapılabilir (`work_order_deliveries` tablosu)
+- **Giriş:** has karşılığı → cari **alacak** (firmaya has borçlanırız)
+- **Her çıkış:** çıkan gramın has karşılığı → cari **borç**, işçilik → cari **borç**
+- **Atölyede kalan** = giriş − çıkışlar. Firmaya o kadar has borcumuz devam eder
+- **Fire cariye hiç işlenmez.** İş bitince "Fişi Kapat" denirse kalan miktar **sadece raporda** fire olarak görünür
+  - Kapalı fiş yönetici tarafından tekrar açılabilir
+- Çıkış, atölyede kalandan fazla olamaz. Giriş gramı, yapılmış çıkışların altına düşürülemez
+- Yönetici bir çıkışı silebilir, bağlı cari kayıtları da silinir
+- Milyem veya firma değiştirilirse giriş ve tüm çıkışların cari kayıtları yeniden hesaplanır
+- Çıkış formunda işçilik varsayılanları firmanın son çıkışından gelir
+- Fişe bağlı cari kayıtları Hareketler ekranından değiştirilemez, fişe yönlendirilir
+
+**Ekranlar**
+- Fiş detayı: Giriş | Has karşılığı | Çıkan | **Atölyede kalan** (kapalıysa **Fire**), çıkışlar tablosu, yeni çıkış formu
+  (canlı önizleme: çıkan has, kalacak gram, işçilik), fişi kapat
+- Atölye listesi: Atölyede / Tamamlanan / Tümü. Sütunlar: giriş, milyem, has, çıkan, kalan (%)
+- Özet kartları: atölyede kalan gram ve has, bu ayın çıkışları, bu ay kapanan fişlerin firesi
+- Bilanço "Atölyede" sütunu: açık fişlerde kalan has
+
+**Veri dönüşümü (migration 2026_10_01_000002)**
+- Eski tek seferlik teslimler çıkış kaydına dönüştürüldü, **fire cari kayıtları silindi**
+- Kalanı olan fişler tekrar "atölyede" durumuna alındı
+- Mustafa / A00001: 26,250 gr giriş, 6,970 gr çıkış, 19,280 gr atölyede. Has bakiyesi 53,546 gr (biz borçluyuz)
+- Migration öncesi yerel veritabanı yedeği: `storage/app/yedek/kuyumcu-2026-10-01-oncesi.sql` (git'e gitmez)
+
+**Teknik**
+- Yeni: `app/Models/WorkOrderDelivery.php`, `app/Support/LinkedTransaction.php` (bağlı cari kaydı oluştur/güncelle/sil)
+- `work_orders`'tan teslim, fire ve işçilik sütunları kaldırıldı, `closed_at` eklendi. Durumlar: `atolyede` | `tamamlandi`
+- Adresler: `POST /atolye/{id}/cikis`, `DELETE /atolye/{id}/cikis/{cikis}`, `POST|DELETE /atolye/{id}/kapat`
+- Testler: 65 test, hepsi geçiyor
+
 ---
 
 ## 5. Yapılacaklar
