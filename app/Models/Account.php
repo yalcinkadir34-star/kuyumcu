@@ -44,6 +44,11 @@ class Account extends Model
         return $this->hasMany(Transaction::class);
     }
 
+    public function workOrders(): HasMany
+    {
+        return $this->hasMany(WorkOrder::class);
+    }
+
     public function scopeSearch(Builder $query, ?string $term): void
     {
         if (blank($term)) {

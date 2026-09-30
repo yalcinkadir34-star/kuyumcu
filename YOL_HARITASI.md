@@ -5,7 +5,7 @@
 > Her geliştirmeden sonra güncellenir ve commit edilir.
 
 **Son güncelleme:** 30.09.2026
-**Mevcut sürüm:** 0.2: Cari hesaplar, kasalar ve genel bilanço
+**Mevcut sürüm:** 0.3: Atölye (fason işçilik, fire takibi)
 
 ---
 
@@ -183,6 +183,45 @@ Yeni birim (ör. 22 ayar, gümüş) eklemek için tabloya satır eklemek yeterli
 | `app/Support/Ledger.php` | Ekstre (devir + yürüyen bakiye) |
 | `resources/views/partials/ledger.blade.php` | Cari ve kasa ekstresi tablosu |
 
+### ✅ v0.3: Atölye / Fason İşçilik (30.09.2026)
+
+**Kullanıcının anlattığı iş akışı**
+- Firmalar döküm ürünlerini atölyeye getirir, atölye fason işçilik (cila vb.) yapar
+- Ürün tartılır, **milyem ürüne ve müşteriye göre değişir** ve elle girilir (0,585 / 0,595 …)
+  - Örnek: 200 gr × 0,585 = **117 gr has**
+- İşlem (cila) sırasında ürün incelir ve **fire** verir. Ortalama %20 civarında ama kesin değer
+  teslimde **tartılarak** girilir. Örnek: 200 → 160 gr, **40 gr fire**
+- Ürün, fire vermiş haliyle ve belli bir **işçilik** ücretiyle firmaya geri gönderilir
+- Fire tozları **aylık rafine/remat** edilerek bir kısmı geri kazanılır (henüz yapılmadı, bkz. Bölüm 5)
+
+**Yapılanlar**
+- **Atölyeye Giriş** (`/atolye/yeni`): firma, ürün, brüt gram, milyem, giriş tarihi
+  - Has karşılığı formda canlı hesaplanır
+  - Milyem `0,585`, `0.585` veya `585` olarak yazılabilir. Firmanın son milyemi otomatik önerilir
+  - Fiş no otomatik: A00001, A00002…
+- **Teslim (Çıkış)**: tartıdaki net gram, çıkış tarihi, işçilik
+  - Fire gram, fire oranı (%), fire has ve çıkış has otomatik hesaplanır (canlı önizleme)
+  - İşçilik iki şekilde girilebilir: **gram başı** (× çıkış gramı) veya **toplam tutar**
+  - İşçilik birimi seçilebilir: TL / USD / EUR / **Has altın**
+  - Firmanın son işçilik ayarı (tip, ücret, birim) teslim formuna otomatik gelir
+  - Teslimde işçilik firmanın carisine **otomatik "Cari Borçlandırma"** olarak işlenir (belge no = fiş no)
+  - Teslim bilgileri sonradan düzeltilebilir, cari kaydı da güncellenir
+  - Yönetici teslimi geri alabilir, bu durumda işçilik cari kaydı silinir
+- **Atölye listesi** (`/atolye`): Atölyede / Teslim edilen / Tümü sekmeleri, firma, tarih ve arama filtresi
+  - Özet kartları: atölyedeki fiş sayısı ve gramı, atölyedeki has (emanet), bu ayın fire gramı, has karşılığı ve ortalama oranı
+- Giriş bilgileri teslimden sonra düzeltilirse fire yeniden hesaplanır
+
+**⚠️ Kabul edilen varsayım (kullanıcıya soruldu, cevaba göre değişebilir)**
+- Firmanın getirdiği altın **emanet** sayıldı ve firmanın carisine **has olarak işlenmiyor**.
+  Sadece işçilik cariye yazılıyor. Fire firmanın ürününden düşüyor.
+  Firmayla has hesabı da tutulacaksa (gelen has → alacak, teslim edilen has → borç) eklenecek.
+
+**Teknik**
+- Yeni tablo: `work_orders`. Model: `app/Models/WorkOrder.php` (`deliver()`, `undeliver()`)
+- Hesaplar: `app/Support/Workshop.php`. Milyem "on binde bir" tam sayıyla, gram "binde bir" tam sayıyla hesaplanıyor, yuvarlama hatası yok
+- Veritabanında milyem `decimal(5,4)`, gramlar `decimal(12,3)`
+- Testler: `tests/Unit/WorkshopTest.php`, `tests/Feature/AtolyeTest.php` (toplam 61 test, hepsi geçiyor)
+
 ---
 
 ## 5. Yapılacaklar
@@ -196,7 +235,13 @@ Kuyumculuk sektörü için **öneri** niteliğindeki başlıklar:
 - [ ] Kasalar arası virman (transfer)
 - [ ] Döviz/altın bozdurma (bir birimden diğerine çevirme)
 - [ ] Cari ekstre yazdırma / PDF
-- [ ] **Atölye**: iş emirleri (müşteriden gelen maden, ayar, milyem, fire, işçilik), teslim alma/verme
+- [x] **Atölye**: fason iş emirleri: giriş (gram, milyem, has), çıkış (tartı, fire), işçilik → cari (v0.3)
+- [ ] **Fire geri kazanımı (aylık rafine/remat)**: dönemsel fire toplamı, rafineden geri alınan has girişi, kazanım oranı
+- [ ] Firma bazında has (emanet) hesabı: varsayım netleşince (bkz. v0.3 notu)
+- [ ] Parçalı teslim (bir girişin birkaç seferde teslim edilmesi): ihtiyaç olursa
+- [ ] Atölye fişi yazdırma (giriş/teslim fişi)
+- [ ] **Google Drive'a otomatik yedek**: veritabanı ve dosyaların düzenli yedeği (kullanıcı istedi, 30.09.2026)
+  - Plan: `spatie/laravel-backup` + Google Drive bağlantısı. Kullanıcının Google Cloud'da bir kerelik izin oluşturması gerekecek
 - [ ] **Stok**: ürün/hammadde, gram ve ayar bazında takip
 - [ ] **Raporlar**: günlük özet, cari bakiye listesi, has altın durumu
 - [ ] **Ayarlar**: kullanıcı yönetimi (personel ekleme, pasif etme, şifre değiştirme), firma bilgileri, altın kurları

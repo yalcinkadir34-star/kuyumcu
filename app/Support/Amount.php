@@ -96,6 +96,24 @@ class Amount
         return self::formatMilli(self::toMilli($value), $currency, $withSymbol);
     }
 
+    /** Binde bir birimli sayıyı istenen ondalık basamağa yuvarlar (yarım yukarı). */
+    public static function roundMilli(int $milli, int $decimals): int
+    {
+        $factor = 10 ** (3 - $decimals);
+        $rounded = intdiv(abs($milli) + intdiv($factor, 2), $factor) * $factor;
+
+        return $milli < 0 ? -$rounded : $rounded;
+    }
+
+    /** Binde bir birimli sayıyı veritabanı biçimine çevirir: 1234567 → "1234.567" */
+    public static function fromMilli(int $milli): string
+    {
+        $sign = $milli < 0 ? '-' : '';
+        $abs = abs($milli);
+
+        return $sign.intdiv($abs, self::SCALE).'.'.str_pad((string) ($abs % self::SCALE), 3, '0', STR_PAD_LEFT);
+    }
+
     /** Form alanında gösterim için: "1234.500" → "1234,5" */
     public static function forInput(string|int|float|null $value): string
     {
