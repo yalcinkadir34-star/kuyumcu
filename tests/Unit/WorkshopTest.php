@@ -58,8 +58,12 @@ class WorkshopTest extends TestCase
         $this->assertSame(117_000, Workshop::hasMilli(Amount::toMilli('200'), '0.5850'));
         // 40 gr fire × 0,585 = 23,4 gr has
         $this->assertSame(23_400, Workshop::hasMilli(Amount::toMilli('40'), '0.5850'));
-        // 123,457 × 0,595 = 73,456915 → 73,457
-        $this->assertSame(73_457, Workshop::hasMilli(Amount::toMilli('123.457'), '0.5950'));
+        // Küsurat atılır: 123,457 × 0,595 = 73,456915 → 73,456
+        $this->assertSame(73_456, Workshop::hasMilli(Amount::toMilli('123.457'), '0.5950'));
+        // Kullanıcının örneği: 26,25 × 0,595 = 15,61875 → 15,618
+        $this->assertSame(15_618, Workshop::hasMilli(Amount::toMilli('26.25'), '0.5950'));
+        // 6,97 × 0,625 = 4,35625 → 4,356
+        $this->assertSame(4_356, Workshop::hasMilli(Amount::toMilli('6.97'), '0.6250'));
     }
 
     public function test_fire_orani_hesaplanir(): void

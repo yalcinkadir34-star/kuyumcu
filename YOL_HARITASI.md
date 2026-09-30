@@ -5,7 +5,7 @@
 > Her geliştirmeden sonra güncellenir ve commit edilir.
 
 **Son güncelleme:** 30.09.2026
-**Mevcut sürüm:** 0.3.3: Atölye işçiliği milyem olarak (ayar + işçilik)
+**Mevcut sürüm:** 0.3.4: Has hesabında küsurat atılır (aşağı yuvarlama)
 
 ---
 
@@ -294,7 +294,7 @@ düşülmüştü, yani işçilik **iki kez** sayılmıştı. Sistem 53,546 göst
 - **Giriş has** = giriş gramı × (ayar milyemi + giriş işçiliği) → 26,25 × (0,585 + 0,010) = **15,619** → cari **alacak**
 - **Çıkış has** = çıkış gramı × (ayar milyemi + çıkış işçiliği) → 6,97 × (0,585 + 0,040) = **4,356** → cari **borç**
 - Mustafa: 46,430 + 15,619 − 4,356 = **57,693 gr has** borcumuz
-  - ⚠️ Kullanıcı 57,49 bekliyordu, 0,203 gr fark var. Kullanıcıya soruldu (bkz. Bölüm 5)
+  - ⚠️ Kullanıcı 57,49 bekliyordu. Fark v0.3.4'te çözüldü (ilk bakiye 46,23 olmalıydı + küsurat atma kuralı)
 - **Atölyede kalan** gram, bilançoda **ayar milyemiyle** (işçiliksiz) saf has olarak sayılır: 19,28 × 0,585 = 11,279
 
 **Değişenler**
@@ -311,12 +311,30 @@ düşülmüştü, yani işçilik **iki kez** sayılmıştı. Sistem 53,546 göst
 - Yedek: `storage/app/yedek/kuyumcu-2026-10-01-iscilik-oncesi.sql`
 - Testler: 68 test, hepsi geçiyor. Kullanıcının örneği `test_kullanicinin_ornegi_iscilik_milyemle_hesaplanir`
 
+### ✅ v0.3.4: Has hesabında küsurat atılır (01.10.2026)
+
+**Kullanıcının verdiği doğru hesap:**
+```
+26,25 × 0,595 = 15,618   (giriş, 10 milyem işçilikle)
+ 6,97 × 0,625 =  4,356   (çıkış, 40 milyem işçilikle)
+İlk bakiye 46,23 → 46,23 + 15,618 − 4,356 = 57,492 ≈ 57,49
+```
+
+**Kural: has hesabında binde birden sonrası atılır (aşağı yuvarlama, kuyumcu usulü)**
+- 26,25 × 0,595 = 15,61875 → **15,618** (önceden 15,619'a yuvarlanıyordu)
+- `Workshop::hasMilli()` ve formlardaki canlı önizleme (JS `hasOf`) aynı kuralı kullanıyor
+- Sadece gram × milyem (has) hesabı için geçerli. TL tutarlarında normal yuvarlama devam ediyor
+
+**Veri düzeltmesi (yerel)**
+- Mustafa'nın elle girilmiş ilk kaydı **46,430 → 46,230** yapıldı (kullanıcı "ilk alacağı 46,23 hastı" dedi)
+- `atolye:yeniden-hesapla` ile A00001 girişi 15,619 → 15,618
+- Sonuç: Mustafa has bakiyesi **57,492 gr** (biz borçluyuz). Kullanıcının beklediği değerle aynı ✓
+- Yedek: `storage/app/yedek/kuyumcu-2026-10-01-yuvarlama-oncesi.sql`
+- Testler: 68 test, hepsi geçiyor
+
 ---
 
 ## 5. Yapılacaklar
-
-### ❓ Kullanıcıya sorulan açık konular
-- Mustafa has bakiyesi: sistem **57,693**, kullanıcı **57,49** bekliyor (0,203 gr fark). Hesabın kontrolü bekleniyor
 
 ### ⏳ Sıradaki: kullanıcıdan özellik detayları bekleniyor
 Aşağıdaki modüller menüde yer tutucu olarak var. Kapsamları kullanıcıyla netleştirilecek.

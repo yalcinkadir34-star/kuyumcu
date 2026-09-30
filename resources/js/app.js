@@ -42,6 +42,9 @@ const formatNumber = (number, decimals = 3) =>
         ? number.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
         : '—';
 
+// Has hesabı: küsurat atılır (sunucudaki Workshop::hasMilli ile aynı), 15,61875 → 15,618
+const hasOf = (gram, purity) => Math.trunc(Math.round(gram * purity * 1e7) / 1e4) / 1000;
+
 // Atölye giriş formu: has = gram × (ayar + giriş işçiliği); firmanın son değerlerini öner
 const workOrderForm = document.querySelector('[data-workorder-form]');
 
@@ -55,7 +58,7 @@ if (workOrderForm) {
 
     const update = () => {
         const total = parsePurity(purity.value) + parseLaborPurity(labor.value);
-        const has = parseNumber(gram.value) * total;
+        const has = hasOf(parseNumber(gram.value), total);
         workOrderForm.querySelector('[data-in-purity]').textContent = total > 0 ? formatNumber(total) : '—';
         workOrderForm.querySelector('[data-has-out]').textContent = has > 0 ? formatNumber(has) : '—';
     };
@@ -90,7 +93,7 @@ if (deliverForm) {
         set('[data-out-purity]', formatNumber(total));
 
         if (gramOut > 0) {
-            set('[data-preview-has]', formatNumber(gramOut * total));
+            set('[data-preview-has]', formatNumber(hasOf(gramOut, total)));
             set('[data-preview-remaining]', formatNumber(remaining - gramOut));
         } else {
             set('[data-preview-has]', '—');

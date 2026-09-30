@@ -109,15 +109,17 @@ class Workshop
         return intdiv($scaled, self::PURITY_SCALE).','.str_pad($frac, 3, '0');
     }
 
-    /** Has karşılığı: gram × milyem (binde bir gram, yarım yukarı yuvarlanır). */
+    /**
+     * Has karşılığı: gram × milyem, binde bir grama kadar. Küsurat atılır (kuyumcu usulü aşağı yuvarlama):
+     * 26,25 × 0,595 = 15,61875 → 15,618
+     */
     public static function hasMilli(int $gramMilli, string|float $purity): int
     {
         $product = $gramMilli * self::purityToInt($purity);
-        $half = intdiv(self::PURITY_SCALE, 2);
 
         return $product >= 0
-            ? intdiv($product + $half, self::PURITY_SCALE)
-            : -intdiv(-$product + $half, self::PURITY_SCALE);
+            ? intdiv($product, self::PURITY_SCALE)
+            : -intdiv(-$product, self::PURITY_SCALE);
     }
 
     /** Fire yüzdesi (ör. 20.0). Giriş sıfırsa 0. */
