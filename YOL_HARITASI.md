@@ -4,7 +4,7 @@
 > sıradaki işler burada tutulur. Bir şey hatırlanmak istendiğinde önce bu dosya okunur.
 > Her geliştirmeden sonra güncellenir ve commit edilir.
 
-**Son güncelleme:** 29.09.2026
+**Son güncelleme:** 30.09.2026
 **Mevcut sürüm:** 0.1: Altyapı, giriş ve ana sayfa
 
 ---
@@ -30,7 +30,9 @@ Web tabanlı kuyumcu atölyesi yönetim uygulaması. Amaç:
 | Arayüz | **Blade + Tailwind CSS 4** (Vite ile derleniyor) | Ek JS framework yok, sade tutuldu |
 | Yerel ortam | **Laragon 8.7** (Windows) | PHP, MySQL, Composer, Node 22 içinde geliyor |
 | Proje klasörü | `C:\laragon\www\kuyumcu` | Laragon otomatik olarak `http://kuyumcu.test` adresini açar |
-| Versiyon kontrol | **Git + GitHub** | Her geliştirme ayrı commit |
+| Versiyon kontrol | **Git + GitHub** | Her geliştirme ayrı commit ve GitHub'a push |
+| GitHub deposu | [yalcinkadir34-star/kuyumcu](https://github.com/yalcinkadir34-star/kuyumcu) (Private) | Dal: `main` |
+| Commit yazarı | Kadir &lt;yalcinkadir34@gmail.com&gt; | 30.09.2026'dan itibaren (ilk 2 commit eski e-postayla) |
 | Saat dilimi | `Europe/Istanbul` | `.env` → `APP_TIMEZONE` |
 | Dil | Türkçe (`APP_LOCALE=tr`) | |
 | Oturum / Cache / Kuyruk | MySQL (database driver) | Ek servis (Redis vb.) gerekmez |
@@ -118,6 +120,12 @@ sunucuda sadece `git pull` + `composer install` yeterli olur.
 | `resources/views/dashboard.blade.php` | Ana sayfa |
 | `resources/css/app.css` | Tema renkleri (`gold-*` tonları) |
 
+### ✅ GitHub bağlantısı (30.09.2026)
+- Private depo oluşturuldu: `https://github.com/yalcinkadir34-star/kuyumcu`
+- GitHub'ın otomatik README'si yerel README ile birleştirildi (yerel sürüm korundu)
+- İlk push kullanıcı tarafından Git Bash'ten yapıldı. GitHub girişi Windows'a (Git Credential Manager) kaydedildi, sonraki push'lar otomatik
+- Commit yazarı "Kadir &lt;yalcinkadir34@gmail.com&gt;" olarak ayarlandı (sadece bu projede)
+
 ---
 
 ## 5. Yapılacaklar
@@ -149,7 +157,7 @@ Kuyumculuk sektörü için **öneri** niteliğindeki başlıklar:
 ## 6. Çalışma Kuralları
 
 1. Her geliştirme sonrası bu dosya güncellenir (Bölüm 4'e yeni sürüm, Bölüm 5'ten tamamlananlar işaretlenir).
-2. Her geliştirme ayrı bir git commit'i olarak kaydedilir, commit mesajları Türkçe.
+2. Her geliştirme ayrı bir git commit'i olarak kaydedilir ve GitHub'a push edilir, commit mesajları Türkçe.
 3. CSS/Blade/JS değişikliğinden sonra commit öncesi `npm run build`.
 4. Yeni özellik = yeni migration (eski migration dosyaları sunucuya çıktıktan sonra **değiştirilmez**).
 5. Parasal ve gram değerler için `decimal` kullanılır (`float` değil); yuvarlama hatası olmasın.
