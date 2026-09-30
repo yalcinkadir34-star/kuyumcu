@@ -39,7 +39,7 @@
         <div class="card-header">
             <div>
                 <h3 class="font-semibold text-stone-900">Genel Bilanço</h3>
-                <p class="text-xs text-stone-500">Net durum = Kasa mevcudu + Carilerden alacaklar − Carilere borçlar</p>
+                <p class="text-xs text-stone-500">Net durum = Kasa mevcudu + Atölyedeki has + Carilerden alacaklar − Carilere borçlar</p>
             </div>
         </div>
         <div class="overflow-x-auto">
@@ -48,6 +48,7 @@
                     <tr>
                         <th>Birim</th>
                         <th class="text-right">Kasa Mevcudu</th>
+                        <th class="text-right">Atölyede</th>
                         <th class="text-right">Alacaklarımız</th>
                         <th class="text-right">Borçlarımız</th>
                         <th class="text-right">Net Durum</th>
@@ -55,10 +56,17 @@
                 </thead>
                 <tbody>
                     @foreach ($currencies as $currency)
-                        @php $row = $summary[$currency->id] ?? ['kasa' => 0, 'alacak' => 0, 'borc' => 0, 'net' => 0]; @endphp
+                        @php $row = $summary[$currency->id] ?? ['kasa' => 0, 'atolye' => 0, 'alacak' => 0, 'borc' => 0, 'net' => 0]; @endphp
                         <tr>
                             <td class="font-medium text-stone-900">{{ $currency->name }}</td>
                             <td class="text-right"><x-kasa-bakiye :milli="$row['kasa']" :currency="$currency" /></td>
+                            <td class="text-right">
+                                @if ($currency->code === 'HAS')
+                                    <x-kasa-bakiye :milli="$row['atolye']" :currency="$currency" />
+                                @else
+                                    <span class="text-stone-300">—</span>
+                                @endif
+                            </td>
                             <td class="text-right tabular-nums {{ $row['alacak'] ? 'text-amber-700' : 'text-stone-400' }}">{{ Amount::formatMilli($row['alacak'], $currency) }}</td>
                             <td class="text-right tabular-nums {{ $row['borc'] ? 'text-sky-700' : 'text-stone-400' }}">{{ Amount::formatMilli($row['borc'], $currency) }}</td>
                             <td class="text-right text-base"><x-kasa-bakiye :milli="$row['net']" :currency="$currency" class="font-semibold" /></td>

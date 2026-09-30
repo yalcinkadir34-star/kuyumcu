@@ -8,6 +8,7 @@ use App\Models\Currency;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Support\Balances;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -45,6 +46,7 @@ class AtolyeTest extends TestCase
         return $this->actingAs($this->user)->post(route('work-orders.deliver', $order), $data + [
             'delivered_at' => '2026-09-10',
             'gross_out' => '160',
+            'fire_bearer' => 'firma',
             'labor_basis' => 'gram',
             'labor_rate' => '15',
             'labor_currency_id' => Currency::firstWhere('code', 'TRY')->id,
@@ -59,6 +61,91 @@ class AtolyeTest extends TestCase
         $this->assertSame('117.000', $order->has_in);
         $this->assertSame('0.5850', $order->purity);
         $this->assertSame(WorkOrder::STATUS_ATOLYEDE, $order->status);
+    }
+
+    private function hasBakiye(): int
+    {
+        return $this->firma->balances()[Currency::firstWhere('code', 'HAS')->id] ?? 0;
+    }
+
+    public function test_giriste_has_firmanin_carisine_alacak_yazilir(): void
+    {
+        // Kullanıcının örneği: 26,25 gr × 0,595 = 15,619 gr has → firmaya borcumuz artar
+        $this->giris(['gross_in' => '26,25', 'purity' => '0,595']);
+
+        $this->assertSame(-15_619, $this->hasBakiye());
+    }
+
+    public function test_fireyi_firma_ustlenirse_has_borcu_kapanir(): void
+    {
+        $order = $this->giris();
+        $this->assertSame(-117_000, $this->hasBakiye());
+
+        $this->teslim($order, ['fire_bearer' => 'firma']);
+
+        // 117 alacak − 93,6 teslim − 23,4 fire = 0
+        $this->assertSame(0, $this->hasBakiye());
+    }
+
+    public function test_fireyi_atolye_ustlenirse_fire_firmaya_borc_kalir(): void
+    {
+        $order = $this->giris();
+        $this->teslim($order, ['fire_bearer' => 'atolye']);
+
+        // 117 alacak − 93,6 teslim = 23,4 gr has firmaya borcumuz
+        $this->assertSame(-23_400, $this->hasBakiye());
+        $this->assertNull($order->fresh()->fire_transaction_id);
+    }
+
+    public function test_giris_duzenlenince_cari_has_guncellenir(): void
+    {
+        $order = $this->giris();
+
+        $this->actingAs($this->user)->put(route('work-orders.update', $order), [
+            'account_id' => $this->firma->id,
+            'product' => '14 ayar bilezik',
+            'received_at' => '2026-09-01',
+            'gross_in' => '100',
+            'purity' => '0,585',
+        ]);
+
+        $this->assertSame(-58_500, $this->hasBakiye());
+        $this->assertSame(1, Transaction::count());
+    }
+
+    public function test_fis_silinince_cari_kaydi_da_silinir(): void
+    {
+        $order = $this->giris();
+
+        $this->actingAs($this->user)->delete(route('work-orders.destroy', $order))->assertRedirect();
+
+        $this->assertSame(0, Transaction::count());
+    }
+
+    public function test_fise_bagli_cari_kaydi_hareketlerden_degistirilemez(): void
+    {
+        $order = $this->giris();
+        $kayit = Transaction::first();
+
+        $this->actingAs($this->user)->get(route('transactions.edit', $kayit))
+            ->assertRedirect(route('work-orders.show', $order));
+        $this->actingAs($this->user)->delete(route('transactions.destroy', $kayit))
+            ->assertRedirect(route('work-orders.show', $order));
+
+        $this->assertSame(1, Transaction::count());
+    }
+
+    public function test_bilancoda_atolyedeki_has_gorunur(): void
+    {
+        $this->giris();
+        $has = Currency::firstWhere('code', 'HAS')->id;
+
+        $ozet = Balances::summary()[$has];
+
+        // Atölyede 117 has var, firmaya 117 has borçluyuz → net 0
+        $this->assertSame(117_000, $ozet['atolye']);
+        $this->assertSame(117_000, $ozet['borc']);
+        $this->assertSame(0, $ozet['net']);
     }
 
     public function test_milyem_urune_gore_elle_girilir(): void
@@ -110,7 +197,8 @@ class AtolyeTest extends TestCase
         $order->refresh();
 
         $this->assertSame('30.000', $order->fire_gram);
-        $this->assertSame(1, Transaction::count());
+        $this->assertSame(4, Transaction::count()); // giriş, teslim, fire, işçilik
+        $this->assertSame(0, $this->hasBakiye());
         $this->assertSame(3_000_000, $this->firma->balances()[Currency::firstWhere('code', 'TRY')->id]);
     }
 
@@ -120,7 +208,7 @@ class AtolyeTest extends TestCase
         $this->teslim($order, ['labor_rate' => '0']);
 
         $this->assertNull($order->fresh()->transaction_id);
-        $this->assertSame(0, Transaction::count());
+        $this->assertSame(3, Transaction::count()); // giriş, teslim, fire (işçilik yok)
     }
 
     public function test_teslim_geri_alinabilir(): void
@@ -133,7 +221,8 @@ class AtolyeTest extends TestCase
         $order->refresh();
         $this->assertSame(WorkOrder::STATUS_ATOLYEDE, $order->status);
         $this->assertNull($order->fire_gram);
-        $this->assertSame(0, Transaction::count());
+        $this->assertSame(1, Transaction::count()); // sadece giriş kaydı kalır
+        $this->assertSame(-117_000, $this->hasBakiye());
     }
 
     public function test_hatali_girisler_reddedilir(): void

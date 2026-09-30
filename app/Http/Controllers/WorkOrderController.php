@@ -11,7 +11,6 @@ use App\Support\Amount;
 use App\Support\Workshop;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class WorkOrderController extends Controller
@@ -65,15 +64,16 @@ class WorkOrderController extends Controller
     {
         $order = new WorkOrder($request->orderData());
         $order->created_by = $request->user()->id;
-        $order->save();
+        $order->saveWithTransactions($request->user());
+
+        $message = "{$order->number} atölyeye alındı: {$order->product}. "
+            .'Firmanın carisine '.Amount::format($order->has_in, Currency::firstWhere('code', 'HAS')).' has alacak yazıldı.';
 
         if ($request->boolean('yeni')) {
-            return redirect()->route('work-orders.create', ['cari' => $order->account_id])
-                ->with('success', "{$order->number} atölyeye alındı: {$order->product}");
+            return redirect()->route('work-orders.create', ['cari' => $order->account_id])->with('success', $message);
         }
 
-        return redirect()->route('work-orders.show', $order)
-            ->with('success', "{$order->number} atölyeye alındı.");
+        return redirect()->route('work-orders.show', $order)->with('success', $message);
     }
 
     public function show(WorkOrder $workOrder): View
@@ -92,6 +92,7 @@ class WorkOrderController extends Controller
             'order' => $workOrder,
             'currencies' => Currency::activeList(),
             'defaults' => [
+                'fire_bearer' => $workOrder->fire_bearer ?? $lastDelivered?->fire_bearer ?? WorkOrder::FIRE_FIRMA,
                 'labor_basis' => $workOrder->labor_basis ?? $lastDelivered?->labor_basis ?? 'gram',
                 'labor_rate' => $workOrder->labor_rate ?? $lastDelivered?->labor_rate,
                 'labor_currency_id' => $workOrder->labor_currency_id
@@ -108,14 +109,11 @@ class WorkOrderController extends Controller
 
     public function update(WorkOrderRequest $request, WorkOrder $workOrder): RedirectResponse
     {
-        DB::transaction(function () use ($request, $workOrder) {
-            $workOrder->update($request->orderData());
+        $workOrder->fill($request->orderData());
+        $workOrder->saveWithTransactions($request->user());
 
-            // Firma değiştiyse işçilik kaydı da yeni firmaya taşınır
-            $workOrder->transaction?->update(['account_id' => $workOrder->account_id]);
-        });
-
-        return redirect()->route('work-orders.show', $workOrder)->with('success', 'Giriş bilgileri güncellendi.');
+        return redirect()->route('work-orders.show', $workOrder)
+            ->with('success', 'Giriş bilgileri güncellendi, cari has kayıtları yeniden hesaplandı.');
     }
 
     public function deliver(DeliverWorkOrderRequest $request, WorkOrder $workOrder): RedirectResponse
@@ -124,10 +122,17 @@ class WorkOrderController extends Controller
         $workOrder->deliver($request->deliveryData(), $request->user());
 
         $message = $wasDelivered ? 'Teslim bilgileri güncellendi.' : "{$workOrder->number} teslim edildi.";
+        $message .= ' Cariye işlendi: '.Amount::format($workOrder->has_out, Currency::firstWhere('code', 'HAS')).' has teslim';
+
+        if ($workOrder->fire_bearer === WorkOrder::FIRE_FIRMA && $workOrder->fire_transaction_id) {
+            $message .= ', '.Amount::format($workOrder->fire_has, Currency::firstWhere('code', 'HAS')).' has fire';
+        }
 
         if ($workOrder->transaction_id) {
-            $message .= ' İşçilik cariye işlendi: '.Amount::format($workOrder->labor_total, $workOrder->laborCurrency);
+            $message .= ', '.Amount::format($workOrder->labor_total, $workOrder->laborCurrency).' işçilik';
         }
+
+        $message .= '.';
 
         return redirect()->route('work-orders.show', $workOrder)->with('success', $message);
     }
@@ -139,7 +144,7 @@ class WorkOrderController extends Controller
         $workOrder->undeliver();
 
         return redirect()->route('work-orders.show', $workOrder)
-            ->with('success', 'Teslim geri alındı, ürün tekrar atölyede. İşçilik cari kaydı silindi.');
+            ->with('success', 'Teslim geri alındı, ürün tekrar atölyede. Teslim, fire ve işçilik cari kayıtları silindi.');
     }
 
     public function destroy(Request $request, WorkOrder $workOrder): RedirectResponse

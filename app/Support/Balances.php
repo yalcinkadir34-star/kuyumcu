@@ -53,14 +53,23 @@ class Balances
     }
 
     /**
-     * Genel bilanço: her birim için kasa mevcudu, cari alacak/borç toplamları ve net durum.
+     * Genel bilanço: her birim için kasa mevcudu, atölyedeki has, cari alacak/borç
+     * toplamları ve net durum.
      *
-     * @return array<int, array{kasa:int, alacak:int, borc:int, net:int}> currency_id => değerler
+     * @return array<int, array{kasa:int, atolye:int, alacak:int, borc:int, net:int}> currency_id => değerler
      */
     public static function summary(): array
     {
         $result = [];
-        $empty = ['kasa' => 0, 'alacak' => 0, 'borc' => 0, 'net' => 0];
+        $empty = ['kasa' => 0, 'atolye' => 0, 'alacak' => 0, 'borc' => 0, 'net' => 0];
+
+        // Atölyede işlem gören ürünlerin has karşılığı (firmalara ait, karşılığı carilerde alacak olarak duruyor)
+        $hasId = DB::table('currencies')->where('code', 'HAS')->value('id');
+        $inWorkshop = Amount::toMilli(DB::table('work_orders')->where('status', 'atolyede')->sum('has_in'));
+
+        if ($hasId && $inWorkshop !== 0) {
+            $result[$hasId] = [...$empty, 'atolye' => $inWorkshop];
+        }
 
         $cash = DB::table('transactions')
             ->where('cash_direction', '!=', 0)
@@ -93,7 +102,7 @@ class Balances
         }
 
         foreach ($result as &$values) {
-            $values['net'] = $values['kasa'] + $values['alacak'] - $values['borc'];
+            $values['net'] = $values['kasa'] + $values['atolye'] + $values['alacak'] - $values['borc'];
         }
 
         return $result;

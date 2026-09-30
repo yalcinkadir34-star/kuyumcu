@@ -8,6 +8,7 @@ use App\Models\Account;
 use App\Models\CashRegister;
 use App\Models\Currency;
 use App\Models\Transaction;
+use App\Models\WorkOrder;
 use App\Support\Amount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -88,8 +89,12 @@ class TransactionController extends Controller
         return redirect($this->backUrl($transaction))->with('success', $message);
     }
 
-    public function edit(Transaction $transaction): View
+    public function edit(Transaction $transaction): View|RedirectResponse
     {
+        if ($redirect = $this->redirectIfLinked($transaction)) {
+            return $redirect;
+        }
+
         return view('transactions.edit', $this->formData($transaction) + [
             'back' => $this->backUrl($transaction),
         ]);
@@ -97,6 +102,10 @@ class TransactionController extends Controller
 
     public function update(TransactionRequest $request, Transaction $transaction): RedirectResponse
     {
+        if ($redirect = $this->redirectIfLinked($transaction)) {
+            return $redirect;
+        }
+
         $transaction->fill($request->transactionData());
         $transaction->updated_by = $request->user()->id;
         $transaction->save();
@@ -108,10 +117,25 @@ class TransactionController extends Controller
     {
         abort_unless($request->user()->isAdmin(), 403);
 
+        if ($redirect = $this->redirectIfLinked($transaction)) {
+            return $redirect;
+        }
+
         $back = $this->backUrl($transaction);
         $transaction->delete();
 
         return redirect($back)->with('success', 'Hareket silindi.');
+    }
+
+    /** Atölye fişinden oluşan kayıtlar sadece fiş üzerinden değiştirilebilir. */
+    private function redirectIfLinked(Transaction $transaction): ?RedirectResponse
+    {
+        $order = WorkOrder::linkedTo($transaction);
+
+        return $order
+            ? redirect()->route('work-orders.show', $order)
+                ->with('error', "Bu kayıt {$order->number} atölye fişinden otomatik oluşturuldu. Değişikliği fiş üzerinden yapın.")
+            : null;
     }
 
     private function formData(Transaction $transaction): array

@@ -5,7 +5,7 @@
 > Her geliştirmeden sonra güncellenir ve commit edilir.
 
 **Son güncelleme:** 30.09.2026
-**Mevcut sürüm:** 0.3: Atölye (fason işçilik, fire takibi)
+**Mevcut sürüm:** 0.3.1: Atölye has hareketleri cariye işleniyor
 
 ---
 
@@ -211,10 +211,30 @@ Yeni birim (ör. 22 ayar, gümüş) eklemek için tabloya satır eklemek yeterli
   - Özet kartları: atölyedeki fiş sayısı ve gramı, atölyedeki has (emanet), bu ayın fire gramı, has karşılığı ve ortalama oranı
 - Giriş bilgileri teslimden sonra düzeltilirse fire yeniden hesaplanır
 
-**⚠️ Kabul edilen varsayım (kullanıcıya soruldu, cevaba göre değişebilir)**
-- Firmanın getirdiği altın **emanet** sayıldı ve firmanın carisine **has olarak işlenmiyor**.
-  Sadece işçilik cariye yazılıyor. Fire firmanın ürününden düşüyor.
-  Firmayla has hesabı da tutulacaksa (gelen has → alacak, teslim edilen has → borç) eklenecek.
+**~~Varsayım: altın emanet, cariye has yazılmaz~~** → v0.3.1'de kullanıcı düzeltti, aşağıya bakın.
+
+### ✅ v0.3.1: Atölye has hareketleri cariye işleniyor (01.10.2026)
+
+**Kullanıcı geri bildirimi:** "Mustafa'nın carisine 26,25 gr × 0,595 ile giriş yaptım ama ona olan borcum artmadı, artması lazım."
+
+**Cariye etkiler (hepsi otomatik, fişe bağlı):**
+| Olay | Cari kaydı | Birim | Örnek (200 gr × 0,585, çıkış 160 gr) |
+|---|---|---|---|
+| Atölyeye giriş | Cari **Alacak** (firmaya borçlanırız) | HAS | 117,000 gr |
+| Teslim | Cari **Borç** (geri verdiğimiz) | HAS | 93,600 gr |
+| Fire, **firma üstlenirse** | Cari **Borç** | HAS | 23,400 gr, fiş için has bakiyesi 0 olur |
+| Fire, **atölye üstlenirse** | kayıt yok | | 23,400 gr firmaya borcumuz kalır |
+| İşçilik | Cari **Borç** | TL/döviz/HAS | 2.400 ₺ |
+
+- Teslim formuna **"Fireyi kim üstleniyor? Firma / Atölye"** seçimi eklendi. Firmanın son seçimi hatırlanır, varsayılan: Firma
+- Giriş düzenlenirse (gram, milyem, firma) cari kayıtları da güncellenir. Fiş silinirse kayıtları da silinir
+- Teslim geri alınırsa teslim, fire ve işçilik kayıtları silinir, giriş kaydı kalır
+- Fişe bağlı cari kayıtları **Hareketler ekranından düzenlenemez veya silinemez**, kullanıcı fişe yönlendirilir (tutarsızlık olmasın)
+- **Genel bilançoya "Atölyede" sütunu** eklendi: atölyedeki ürünlerin has karşılığı varlık olarak sayılır
+  (firmaya olan has borcuyla dengelenir). Net = Kasa + Atölyede + Alacaklar − Borçlar
+- Migration, daha önce girilmiş fişleri otomatik olarak cariye işledi (Mustafa / A00001 → 15,619 gr has alacak)
+- Yeni alanlar: `work_orders.in_transaction_id`, `out_transaction_id`, `fire_transaction_id`, `fire_bearer`
+- Testler: 68 test, hepsi geçiyor
 
 **Teknik**
 - Yeni tablo: `work_orders`. Model: `app/Models/WorkOrder.php` (`deliver()`, `undeliver()`)
@@ -237,7 +257,7 @@ Kuyumculuk sektörü için **öneri** niteliğindeki başlıklar:
 - [ ] Cari ekstre yazdırma / PDF
 - [x] **Atölye**: fason iş emirleri: giriş (gram, milyem, has), çıkış (tartı, fire), işçilik → cari (v0.3)
 - [ ] **Fire geri kazanımı (aylık rafine/remat)**: dönemsel fire toplamı, rafineden geri alınan has girişi, kazanım oranı
-- [ ] Firma bazında has (emanet) hesabı: varsayım netleşince (bkz. v0.3 notu)
+- [x] Firma bazında has hesabı: giriş, teslim ve fire cariye işleniyor (v0.3.1)
 - [ ] Parçalı teslim (bir girişin birkaç seferde teslim edilmesi): ihtiyaç olursa
 - [ ] Atölye fişi yazdırma (giriş/teslim fişi)
 - [ ] **Google Drive'a otomatik yedek**: veritabanı ve dosyaların düzenli yedeği (kullanıcı istedi, 30.09.2026)

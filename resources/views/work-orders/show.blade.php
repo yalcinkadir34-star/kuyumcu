@@ -46,6 +46,10 @@
             @if ($order->notes)
                 <div class="border-t border-stone-100 px-5 py-3 text-sm whitespace-pre-line text-stone-600">{{ $order->notes }}</div>
             @endif
+            <div class="border-t border-stone-100 px-5 py-3 text-sm text-stone-600">
+                Has karşılığı <a href="{{ route('accounts.show', $order->account) }}" class="font-medium text-gold-700 hover:underline">{{ $order->account->name }}</a>
+                carisine <span class="font-medium text-sky-700">alacak</span> olarak işlendi (firmaya has borcumuz).
+            </div>
         </div>
 
         {{-- Çıkış sonucu --}}
@@ -79,11 +83,10 @@
                     </div>
                 </dl>
                 <div class="border-t border-stone-100 px-5 py-3 text-sm text-stone-600">
-                    @if ($order->transaction)
-                        İşçilik <a href="{{ route('accounts.show', $order->account) }}" class="font-medium text-gold-700 hover:underline">{{ $order->account->name }}</a> carisine borç olarak işlendi.
-                    @else
-                        İşçilik tutarı olmadığı için cariye kayıt yapılmadı.
-                    @endif
+                    Fireyi <span class="font-medium text-stone-900">{{ $order->fire_bearer === 'atolye' ? 'atölye' : 'firma' }}</span> üstlendi.
+                    @unless ($order->transaction)
+                        İşçilik tutarı olmadığı için cariye işçilik yazılmadı.
+                    @endunless
                 </div>
             </div>
         @endif
@@ -119,6 +122,26 @@
                                    value="{{ old('delivered_at', $order->delivered_at?->format('Y-m-d') ?? now()->format('Y-m-d')) }}"
                                    class="input @error('delivered_at') input-error @enderror">
                             @error('delivered_at') <p class="field-error">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <span class="label">Fireyi kim üstleniyor?</span>
+                            <div class="grid gap-2 sm:grid-cols-2">
+                                @foreach ([
+                                    'firma' => ['Firma', 'Fire has\'ı firmanın hesabından düşülür. Bu fiş için firmaya has borcumuz kalmaz.'],
+                                    'atolye' => ['Atölye', 'Fire has\'ı firmaya borcumuz olarak kalır.'],
+                                ] as $value => [$label, $hint])
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="fire_bearer" value="{{ $value }}" class="peer sr-only"
+                                               @checked(old('fire_bearer', $defaults['fire_bearer']) === $value)>
+                                        <span class="block rounded-lg border border-stone-300 px-3 py-2 text-sm peer-checked:border-gold-500 peer-checked:bg-gold-50 peer-checked:ring-2 peer-checked:ring-gold-500/20">
+                                            <span class="font-medium text-stone-900">{{ $label }}</span>
+                                            <span class="block text-xs text-stone-500">{{ $hint }}</span>
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            @error('fire_bearer') <p class="field-error">{{ $message }}</p> @enderror
                         </div>
 
                         <div>
