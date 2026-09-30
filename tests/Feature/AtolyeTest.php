@@ -58,12 +58,12 @@ class AtolyeTest extends TestCase
 
     public function test_kullanicinin_ornegi_iscilik_milyemle_hesaplanir(): void
     {
-        // Önceki bakiye: 46,23 gr has borcumuz
+        // Önceki bakiye: 46,43 gr has borcumuz
         $this->actingAs($this->user)->post(route('transactions.store'), [
             'type' => 'cari_alacak',
             'account_id' => $this->firma->id,
             'currency_id' => Currency::firstWhere('code', 'HAS')->id,
-            'amount' => '46,23',
+            'amount' => '46,43',
             'date' => '2026-09-30',
         ]);
 
@@ -76,8 +76,8 @@ class AtolyeTest extends TestCase
         $this->cikis($order, ['gross_out' => '6,97', 'labor_purity' => '0,040'])->assertSessionHasNoErrors();
         $this->assertSame('4.356', $order->deliveries()->first()->has_out);
 
-        // Has borcumuz: 46,23 + 15,618 − 4,356 = 57,492. İşçilik ayrıca düşülmez.
-        $this->assertSame(-57_492, $this->hasBakiye());
+        // Has borcumuz: 46,43 + 15,618 − 4,356 = 57,692. İşçilik ayrıca düşülmez.
+        $this->assertSame(-57_692, $this->hasBakiye());
         $this->assertSame(19_280, $order->fresh()->remainingMilli());
     }
 

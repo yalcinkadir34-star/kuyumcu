@@ -294,7 +294,7 @@ düşülmüştü, yani işçilik **iki kez** sayılmıştı. Sistem 53,546 göst
 - **Giriş has** = giriş gramı × (ayar milyemi + giriş işçiliği) → 26,25 × (0,585 + 0,010) = **15,619** → cari **alacak**
 - **Çıkış has** = çıkış gramı × (ayar milyemi + çıkış işçiliği) → 6,97 × (0,585 + 0,040) = **4,356** → cari **borç**
 - Mustafa: 46,430 + 15,619 − 4,356 = **57,693 gr has** borcumuz
-  - ⚠️ Kullanıcı 57,49 bekliyordu. Fark v0.3.4'te çözüldü (ilk bakiye 46,23 olmalıydı + küsurat atma kuralı)
+  - v0.3.4'te küsurat atma kuralı gelince 57,692 oldu (ilk bakiye 46,43)
 - **Atölyede kalan** gram, bilançoda **ayar milyemiyle** (işçiliksiz) saf has olarak sayılır: 19,28 × 0,585 = 11,279
 
 **Değişenler**
@@ -317,8 +317,9 @@ düşülmüştü, yani işçilik **iki kez** sayılmıştı. Sistem 53,546 göst
 ```
 26,25 × 0,595 = 15,618   (giriş, 10 milyem işçilikle)
  6,97 × 0,625 =  4,356   (çıkış, 40 milyem işçilikle)
-İlk bakiye 46,23 → 46,23 + 15,618 − 4,356 = 57,492 ≈ 57,49
+İlk bakiye 46,43 → 46,43 + 15,618 − 4,356 = 57,692
 ```
+(Kullanıcı önce ilk bakiyeyi 46,23 dedi, sonra "yanlış oldu, 46,43 olmalı" diye düzeltti.)
 
 **Kural: has hesabında binde birden sonrası atılır (aşağı yuvarlama, kuyumcu usulü)**
 - 26,25 × 0,595 = 15,61875 → **15,618** (önceden 15,619'a yuvarlanıyordu)
@@ -326,9 +327,9 @@ düşülmüştü, yani işçilik **iki kez** sayılmıştı. Sistem 53,546 göst
 - Sadece gram × milyem (has) hesabı için geçerli. TL tutarlarında normal yuvarlama devam ediyor
 
 **Veri düzeltmesi (yerel)**
-- Mustafa'nın elle girilmiş ilk kaydı **46,430 → 46,230** yapıldı (kullanıcı "ilk alacağı 46,23 hastı" dedi)
+- Mustafa'nın elle girilmiş ilk kaydı **46,430** olarak kaldı (kısa süre 46,230 yapıldı, kullanıcı düzeltince geri alındı)
 - `atolye:yeniden-hesapla` ile A00001 girişi 15,619 → 15,618
-- Sonuç: Mustafa has bakiyesi **57,492 gr** (biz borçluyuz). Kullanıcının beklediği değerle aynı ✓
+- Sonuç: Mustafa has bakiyesi **57,692 gr** (biz borçluyuz) = 46,43 + 15,618 − 4,356 ✓
 - Yedek: `storage/app/yedek/kuyumcu-2026-10-01-yuvarlama-oncesi.sql`
 - Testler: 68 test, hepsi geçiyor
 
