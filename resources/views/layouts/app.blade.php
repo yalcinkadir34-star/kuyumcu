@@ -9,6 +9,7 @@
         ['label' => 'Atölye', 'route' => 'work-orders.index', 'active' => 'work-orders.*', 'icon' => 'M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z'],
         ['label' => 'Stok', 'route' => null, 'icon' => 'M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8'],
         ['label' => 'Raporlar', 'route' => null, 'icon' => 'M4 20V10M10 20V4M16 20v-7M22 20H2'],
+        ['label' => 'Yedekleme', 'route' => 'backups.index', 'active' => 'backups.*', 'admin' => true, 'icon' => 'M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 7v5c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12v5c0 1.7 3.6 3 8 3s8-1.3 8-3v-5'],
         ['label' => 'Ayarlar', 'route' => null, 'icon' => 'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z'],
     ];
 @endphp
@@ -34,6 +35,7 @@
 
         <nav class="flex-1 space-y-1 overflow-y-auto p-3">
             @foreach ($menu as $item)
+                @continue(($item['admin'] ?? false) && ! auth()->user()->isAdmin())
                 @if ($item['route'])
                     @php $active = request()->routeIs($item['active']); @endphp
                     <a href="{{ route($item['route']) }}"
@@ -56,7 +58,7 @@
         </nav>
 
         <div class="border-t border-white/5 p-4 text-xs text-stone-500">
-            Sürüm 0.3
+            Sürüm 0.4
         </div>
     </aside>
 
@@ -70,6 +72,15 @@
             <h1 class="truncate text-lg font-semibold text-stone-900">@yield('title')</h1>
 
             <div class="ml-auto flex items-center gap-3">
+                @if (auth()->user()->isAdmin())
+                    <form method="POST" action="{{ route('backups.store') }}" data-loading-text="Yedek alınıyor…">
+                        @csrf
+                        <button class="btn btn-secondary py-1.5" title="Veritabanının yedeğini al">
+                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                            <span class="hidden md:inline">Yedek Al</span>
+                        </button>
+                    </form>
+                @endif
                 <div class="hidden text-right sm:block">
                     <div class="text-sm font-medium text-stone-900">{{ auth()->user()->name }}</div>
                     <div class="text-xs text-stone-500">{{ auth()->user()->roleLabel() }}</div>

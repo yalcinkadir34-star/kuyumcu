@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\CashRegisterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TransactionController;
@@ -39,4 +40,14 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->except('show')
         ->names('transactions')
         ->parameters(['hareketler' => 'transaction']);
+
+    // Yedekleme (sadece yönetici)
+    Route::middleware('admin')->prefix('yedekleme')->name('backups.')->group(function () {
+        Route::get('/', [BackupController::class, 'index'])->name('index');
+        Route::post('/', [BackupController::class, 'store'])->name('store');
+        Route::get('/{backupLog}/indir', [BackupController::class, 'download'])->name('download');
+        Route::get('/google/baglan', [BackupController::class, 'connect'])->name('google.connect');
+        Route::get('/google/callback', [BackupController::class, 'callback'])->name('google.callback');
+        Route::delete('/google', [BackupController::class, 'disconnect'])->name('google.disconnect');
+    });
 });

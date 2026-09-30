@@ -18,4 +18,22 @@ return [
         'password' => env('ADMIN_PASSWORD'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Yedekleme
+    |--------------------------------------------------------------------------
+    |
+    | Otomatik yedek saatleri (günde 3 kez) ve Google Drive bağlantısı.
+    | Google bilgileri Google Cloud Console'da oluşturulan OAuth istemcisinden gelir.
+    |
+    */
+
+    'backup' => [
+        'times' => ['10:00', '15:00', '20:00'],
+        'drive_keep' => 90, // Drive'da saklanacak en fazla yedek sayısı (~30 gün)
+        'drive_folder_name' => 'Kuyumcu Yedekleri',
+        'google_client_id' => env('GOOGLE_DRIVE_CLIENT_ID'),
+        'google_client_secret' => env('GOOGLE_DRIVE_CLIENT_SECRET'),
+    ],
+
 ];

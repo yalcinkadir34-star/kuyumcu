@@ -8,10 +8,23 @@ document.addEventListener('click', (event) => {
 });
 
 // <form data-confirm="Emin misiniz?"> gönderilmeden önce onay ister
+// <form data-loading-text="…"> gönderilince buton kilitlenir (çift tıklamayı önler)
 document.addEventListener('submit', (event) => {
-    const message = event.target.dataset?.confirm;
+    const form = event.target;
+    const message = form.dataset?.confirm;
+
     if (message && !window.confirm(message)) {
         event.preventDefault();
+        return;
+    }
+
+    if (form.dataset?.loadingText) {
+        const button = form.querySelector('button');
+        if (button) {
+            button.disabled = true;
+            button.classList.add('opacity-60', 'cursor-wait');
+            button.lastElementChild.textContent = form.dataset.loadingText;
+        }
     }
 });
 

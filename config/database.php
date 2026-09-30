@@ -62,6 +62,11 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
+            // Yedekleme (spatie/laravel-backup): mysqldump'ın bulunduğu klasör. Windows/Laragon'da .env'de verilir.
+            'dump' => array_filter([
+                'dump_binary_path' => env('DB_DUMP_PATH'),
+                'useSingleTransaction' => true,
+            ]),
         ],
 
         'mariadb' => [

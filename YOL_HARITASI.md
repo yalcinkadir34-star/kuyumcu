@@ -5,7 +5,7 @@
 > Her geliştirmeden sonra güncellenir ve commit edilir.
 
 **Son güncelleme:** 30.09.2026
-**Mevcut sürüm:** 0.3.4: Has hesabında küsurat atılır (aşağı yuvarlama)
+**Mevcut sürüm:** 0.4: Yedekleme (buton + günde 3 otomatik + Google Drive)
 
 ---
 
@@ -333,6 +333,48 @@ düşülmüştü, yani işçilik **iki kez** sayılmıştı. Sistem 53,546 göst
 - Yedek: `storage/app/yedek/kuyumcu-2026-10-01-yuvarlama-oncesi.sql`
 - Testler: 68 test, hepsi geçiyor
 
+### ✅ v0.4: Yedekleme ve Google Drive (01.10.2026)
+
+**Kullanıcı istekleri:** "Google Drive bağlayacağız, yedek alacağız", "yedekleme butonu da koy, tıklayarak
+yedek alayım", "günde 3 kere de kendin yedek al".
+
+**Nasıl çalışıyor**
+- Yedek = **sadece veritabanı** (mysqldump → zip). Kod GitHub'da, `.env` gizli olduğu için yedeklenmez
+- Paket: `spatie/laravel-backup` (v10). Yerel yedekler: `storage/app/private/kuyumcu-yedek/kuyumcu-YYYY-MM-DD-HH-MM-SS.zip`
+- Yerel temizlik (`backup:clean`): 7 gün hepsi, 30 gün günlük, 8 hafta haftalık, 12 ay aylık
+- **Google Drive:** her yedek Drive'daki **"Kuyumcu Yedekleri"** klasörüne yüklenir, en yeni **90** yedek tutulur (~30 gün)
+  - Drive API doğrudan HTTP ile kullanılıyor (Google kütüphanesi yok): `app/Services/GoogleDrive.php`
+  - Yetki `drive.file`: uygulama sadece kendi oluşturduğu dosyaları görür
+  - Bağlantı (refresh token) `settings` tablosunda **şifreli** saklanır
+  - Drive'a yüklenemezse yedek yine yerelde kalır, hata geçmişte görünür
+- **Buton:** üst çubukta **"Yedek Al"** (her sayfada) ve Yedekleme sayfasında **"Şimdi Yedek Al"**. Çift tıklamaya karşı kilitli
+- **Otomatik:** her gün **10:00, 15:00, 20:00** (`config/kuyumcu.php` → `backup.times`), komut: `php artisan yedek:al`
+  - Laravel zamanlaması `routes/console.php` içinde. **Tetikleyici gerekiyor:**
+    - Windows (yerel): `scripts/windows-yedek-gorevi.ps1` → Görev Zamanlayıcı'ya "Kuyumcu Yedek" görevi (pencere açmadan)
+    - Sunucu: cron'a `* * * * * cd /proje && php artisan schedule:run >> /dev/null 2>&1`
+- **Yedekleme sayfası** (`/yedekleme`, sadece yönetici): son yedek, otomatik yedek saatleri, Drive durumu
+  (bağlı hesap, klasörü aç, bağlantıyı kaldır), kurulum adımları, yedek geçmişi (indirme)
+- Yeni tablolar: `settings` (anahtar-değer ayarlar), `backup_logs` (yedek geçmişi)
+- Yeni `admin` middleware'i: sadece yöneticinin erişebildiği sayfalar
+
+**Google Drive kurulumu (bir kerelik, kullanıcı yapacak):** Yedekleme sayfasında adım adım yazıyor
+1. Google Cloud Console → yeni proje → Google Drive API'yi etkinleştir
+2. OAuth izin ekranı: External, **Publish app** (yayınlanmazsa bağlantı 7 günde kopar)
+3. OAuth istemcisi (Web application), yönlendirme adresi: `http://localhost:8000/yedekleme/google/callback`
+   - Google `.test` adreslerini kabul etmez. Yerelde bağlanma işlemi **localhost:8000** üzerinden yapılmalı
+   - Sunucuya taşınınca sunucu adresiyle yeni bir yönlendirme adresi eklenmeli
+4. Client ID ve secret `.env` dosyasına: `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`
+5. Yedekleme sayfasında "Google Drive'a Bağlan"
+
+**Windows'a özgü düzeltme:** Web isteğinden çalışan mysqldump "Can't create TCP/IP socket (10106)" hatası veriyordu.
+Symfony Process ortam değişkenlerini `$_SERVER` ile süzdüğü için `SystemRoot` alt işleme geçmiyordu.
+`BackupService::ensureWindowsEnvironment()` bunu düzeltiyor.
+
+**.env yeni anahtarlar:** `DB_DUMP_PATH` (Laragon: `C:/laragon/bin/mysql/mysql-8.4.3-winx64/bin`, Linux'ta boş),
+`GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`
+
+- Testler: `tests/Feature/YedeklemeTest.php` (Drive çağrıları sahte). Toplam 79 test, hepsi geçiyor
+
 ---
 
 ## 5. Yapılacaklar
@@ -351,8 +393,10 @@ Kuyumculuk sektörü için **öneri** niteliğindeki başlıklar:
 - [x] Firma bazında has hesabı: giriş, teslim ve fire cariye işleniyor (v0.3.1)
 - [x] Parçalı teslim (bir girişin birkaç seferde çıkışı) (v0.3.2)
 - [ ] Atölye fişi yazdırma (giriş/teslim fişi)
-- [ ] **Google Drive'a otomatik yedek**: veritabanı ve dosyaların düzenli yedeği (kullanıcı istedi, 30.09.2026)
-  - Plan: `spatie/laravel-backup` + Google Drive bağlantısı. Kullanıcının Google Cloud'da bir kerelik izin oluşturması gerekecek
+- [x] **Google Drive'a otomatik yedek** + yedek butonu + günde 3 otomatik yedek (v0.4)
+  - [ ] Kullanıcı Google Cloud kurulumunu yapıp Drive'ı bağlayacak
+  - [ ] Windows Görev Zamanlayıcı görevi kurulacak (`scripts/windows-yedek-gorevi.ps1`)
+- [ ] Yedekten geri yükleme ekranı (şimdilik: zip'teki .sql dosyası HeidiSQL ile içe aktarılır)
 - [ ] **Stok**: ürün/hammadde, gram ve ayar bazında takip
 - [ ] **Raporlar**: günlük özet, cari bakiye listesi, has altın durumu
 - [ ] **Ayarlar**: kullanıcı yönetimi (personel ekleme, pasif etme, şifre değiştirme), firma bilgileri, altın kurları
@@ -364,6 +408,9 @@ Kuyumculuk sektörü için **öneri** niteliğindeki başlıklar:
 - [ ] `.env` oluştur (`APP_ENV=production`, `APP_DEBUG=false`, gerçek DB bilgileri, güçlü `ADMIN_PASSWORD`)
 - [ ] `php artisan key:generate` → `php artisan migrate --force` → `php artisan db:seed --force`
 - [ ] `php artisan config:cache && php artisan route:cache && php artisan view:cache`
+- [ ] Cron: `* * * * * cd /proje && php artisan schedule:run >> /dev/null 2>&1` (otomatik yedek için şart)
+- [ ] Sunucuda `mysqldump` kurulu olmalı. `.env` → `DB_DUMP_PATH` boş bırakılabilir
+- [ ] Google Cloud OAuth istemcisine sunucu adresiyle yönlendirme adresi ekle: `https://ALANADI/yedekleme/google/callback`
 - [ ] Web sunucusunun kök dizini `public/` klasörü olmalı
 - [ ] HTTPS (SSL) aktif edilmeli
 - [ ] Güncelleme akışı: `git pull` → `composer install --no-dev` → `php artisan migrate --force` → cache komutları
