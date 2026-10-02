@@ -41,6 +41,7 @@ class RamatTest extends TestCase
             'delivered_at' => '2026-10-02T10:00:00',
             'gross_out' => $gram,
             'purity_out' => $milyem,
+            'kind' => 'atolye',
         ])->assertSessionHasNoErrors();
     }
 

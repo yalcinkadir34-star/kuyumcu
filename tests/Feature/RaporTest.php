@@ -45,6 +45,7 @@ class RaporTest extends TestCase
             'delivered_at' => $tarih,
             'gross_out' => $gram,
             'purity_out' => $milyem,
+            'kind' => 'atolye',
         ])->assertSessionHasNoErrors();
     }
 

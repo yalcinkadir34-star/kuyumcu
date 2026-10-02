@@ -53,7 +53,12 @@
                 <tbody>
                     @forelse ($deliveries as $delivery)
                         <tr>
-                            <td class="font-mono text-xs font-medium text-stone-700">{{ $delivery->number }}</td>
+                            <td class="whitespace-nowrap">
+                                <span class="font-mono text-xs font-medium text-stone-700">{{ $delivery->number }}</span>
+                                @if ($delivery->isSale())
+                                    <div><span class="badge bg-violet-50 text-violet-700 ring-violet-600/20" title="Atölyenin kendi ürünü, ramatı etkilemez">Satış</span></div>
+                                @endif
+                            </td>
                             <td class="whitespace-nowrap text-stone-600">{{ $delivery->delivered_at->format('d.m.Y H:i:s') }}</td>
                             <td>
                                 <div class="font-medium text-stone-900">{{ $delivery->account->name }}</div>

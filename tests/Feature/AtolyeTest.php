@@ -50,6 +50,7 @@ class AtolyeTest extends TestCase
             'delivered_at' => '2026-09-10T10:00:00',
             'gross_out' => '160',
             'purity_out' => '0,585',
+            'kind' => 'atolye',
         ]);
     }
 
@@ -130,6 +131,56 @@ class AtolyeTest extends TestCase
         // Başka müşterinin girişi bu müşterinin kalanına sayılmaz
         $baska = Account::factory()->create();
         $this->cikis(['account_id' => $baska->id, 'gross_out' => '1'])->assertSessionHasErrors('gross_out');
+    }
+
+    public function test_atolyede_girisi_olmayan_musteriye_satis_cikisi_yapilir(): void
+    {
+        // Kullanıcının durumu: müşteri has altın verdi, atölye kendi ürününü işleyip verdi
+        $musteri = Account::factory()->create(['name' => 'Has Veren Müşteri']);
+        $this->actingAs($this->user)->post(route('transactions.store'), [
+            'type' => 'cari_alacak',
+            'account_id' => $musteri->id,
+            'currency_id' => Currency::firstWhere('code', 'HAS')->id,
+            'amount' => '20',
+            'date' => '2026-09-05T10:00:00',
+            'description' => 'Has altın verdi',
+        ]);
+
+        $this->actingAs($this->user)->get(route('workshop-deliveries.create'))->assertOk()->assertSee('Has Veren Müşteri');
+
+        $this->cikis(['account_id' => $musteri->id, 'kind' => 'satis', 'gross_out' => '30', 'purity_out' => '0,625', 'product' => 'Bilezik'])
+            ->assertSessionHasNoErrors();
+
+        $delivery = WorkOrderDelivery::first();
+        $this->assertTrue($delivery->isSale());
+        $this->assertSame('18.750', $delivery->has_out); // 30 × 0,625
+
+        // Cari: 20 alacak − 18,75 = 1,25 has borcumuz kaldı
+        $this->assertSame(-1_250, $this->hasBakiye($musteri));
+
+        // Ramat etkilenmez, müşteri ramat hesabında görünmez
+        $this->assertSame([], WorkshopTotals::forAccounts([$musteri->id]));
+        $this->assertStringContainsString('Satış', Transaction::latest('id')->first()->description);
+    }
+
+    public function test_satis_cikisi_ramati_etkilemez_atolye_cikisi_sinirli_kalir(): void
+    {
+        $this->giris(['gross_in' => '50']);
+
+        // Atölye ürünü: 50'den fazlası çıkamaz; satış ise sınırsız ve ramatı değiştirmez
+        $this->cikis(['kind' => 'atolye', 'gross_out' => '60'])->assertSessionHasErrors('gross_out');
+        $this->cikis(['kind' => 'satis', 'gross_out' => '60'])->assertSessionHasNoErrors();
+
+        $this->assertSame(50_000, WorkshopTotals::forAccount($this->firma->id)['ramat_gram']);
+        $this->actingAs($this->user)->get(route('workshop-deliveries.index'))->assertSee('Satış');
+    }
+
+    public function test_cikis_turu_zorunlu(): void
+    {
+        $this->giris();
+
+        $this->cikis(['kind' => ''])->assertSessionHasErrors('kind');
+        $this->cikis(['kind' => 'baska'])->assertSessionHasErrors('kind');
     }
 
     public function test_cikis_milyemi_zorunlu_ve_gecerli_olmali(): void

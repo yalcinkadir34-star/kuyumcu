@@ -102,7 +102,7 @@ class ReportController extends Controller
             } elseif ($delivery = $exits->get($row->id)) {
                 $row->gram_milli = Amount::toMilli($delivery->gross_out);
                 $row->purity = $delivery->purity_out;
-                $row->label = 'Teslim'.($delivery->product ? ' · '.$delivery->product : '');
+                $row->label = ($delivery->isSale() ? 'Satış' : 'Teslim').($delivery->product ? ' · '.$delivery->product : '');
                 $row->document_no = $delivery->number;
             }
 

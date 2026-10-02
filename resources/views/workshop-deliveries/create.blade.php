@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="max-w-3xl">
-        <x-page-header title="Atölyeden Çıkış" subtitle="Müşteriye teslim edilen ürünü tartıp çıkış milyemiyle kaydedin" :back="route('workshop-deliveries.index')" />
+        <x-page-header title="Atölyeden Çıkış" subtitle="Müşteriye teslim edilen ürünü tartıp çıkış milyemiyle kaydedin. Atölyede ürünü olmayan müşteriye de satış çıkışı yapılabilir." :back="route('workshop-deliveries.index')" />
 
         <form method="POST" action="{{ route('workshop-deliveries.store') }}" class="card" data-delivery-form data-info='@json($info)'>
             @csrf
@@ -19,9 +19,26 @@
                     </select>
                     @error('account_id') <p class="field-error">{{ $message }}</p> @enderror
                     <p class="mt-1 text-sm text-stone-600" data-delivery-remaining></p>
-                    @if ($accounts->isEmpty())
-                        <p class="mt-1 text-xs text-stone-500">Atölyede ürünü olan müşteri yok. Önce <a href="{{ route('work-orders.create') }}" class="font-medium text-gold-700 hover:underline">atölyeye giriş</a> yapın.</p>
-                    @endif
+                </div>
+
+                <div class="sm:col-span-2">
+                    <span class="label">Çıkış türü <span class="text-red-500">*</span></span>
+                    <div class="grid gap-2 sm:grid-cols-2">
+                        @foreach ([
+                            'atolye' => ['Atölyedeki ürününden', 'Müşterinin getirdiği ürün teslim ediliyor. Ramattan düşer.'],
+                            'satis' => ['Kendi ürünüm (satış)', 'Atölyenin kendi ürünü (ör. müşterinin verdiği has karşılığı). Ramatı etkilemez.'],
+                        ] as $value => [$label, $hint])
+                            <label class="cursor-pointer">
+                                <input type="radio" name="kind" value="{{ $value }}" data-delivery-kind class="peer sr-only"
+                                       @checked(old('kind', 'atolye') === $value)>
+                                <span class="block h-full rounded-lg border border-stone-300 px-3 py-2 text-sm peer-checked:border-gold-500 peer-checked:bg-gold-50 peer-checked:ring-2 peer-checked:ring-gold-500/20">
+                                    <span class="font-medium text-stone-900">{{ $label }}</span>
+                                    <span class="block text-xs text-stone-500">{{ $hint }}</span>
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+                    @error('kind') <p class="field-error">{{ $message }}</p> @enderror
                 </div>
 
                 <div class="sm:col-span-2">
@@ -69,7 +86,7 @@
                     <div class="text-xs text-stone-500">Cariden düşecek has</div>
                     <div class="mt-0.5 text-lg font-semibold tabular-nums text-gold-800"><span data-preview-has>—</span> gr</div>
                 </div>
-                <div class="bg-white p-3">
+                <div class="bg-white p-3" data-preview-remaining-box>
                     <div class="text-xs text-stone-500">Müşterinin atölyede kalacak ürünü</div>
                     <div class="mt-0.5 text-lg font-semibold tabular-nums"><span data-preview-remaining>—</span> gr</div>
                 </div>

@@ -56,21 +56,28 @@ class WorkshopDeliveryController extends Controller
     {
         $totals = WorkshopTotals::forAccounts();
 
-        // Atölyede ürünü kalan müşteriler (ramat > 0)
+        // Carisi kayıtlı tüm aktif müşteriler: atölyede ürünü olmayana da (satış) çıkış yapılabilir
         $accounts = Account::query()
-            ->whereIn('id', array_keys(array_filter($totals, fn ($t) => $t['ramat_gram'] > 0)))
+            ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'code', 'name']);
 
         $gr = new Currency(['symbol' => 'gr', 'decimals' => 3]);
 
-        // Formda müşteri seçilince gösterilecek bilgiler: kalan gram ve son çıkış milyemi
-        $info = $accounts->mapWithKeys(fn (Account $a) => [$a->id => [
-            'kalan' => Amount::formatMilli($totals[$a->id]['ramat_gram'], $gr),
-            'kalanSayi' => Amount::fromMilli($totals[$a->id]['ramat_gram']),
-            'sonMilyem' => ($p = WorkOrderDelivery::where('account_id', $a->id)->latest('id')->value('purity_out'))
-                ? Workshop::formatPurity($p) : null,
-        ]]);
+        // Formda müşteri seçilince gösterilecek bilgiler: atölyede kalan gram ve son çıkış milyemi
+        $lastPurities = WorkOrderDelivery::query()
+            ->whereIn('id', WorkOrderDelivery::query()->selectRaw('MAX(id)')->groupBy('account_id'))
+            ->pluck('purity_out', 'account_id');
+
+        $info = $accounts->mapWithKeys(function (Account $a) use ($totals, $gr, $lastPurities) {
+            $ramat = max($totals[$a->id]['ramat_gram'] ?? 0, 0);
+
+            return [$a->id => [
+                'kalan' => Amount::formatMilli($ramat, $gr),
+                'kalanSayi' => Amount::fromMilli($ramat),
+                'sonMilyem' => isset($lastPurities[$a->id]) ? Workshop::formatPurity($lastPurities[$a->id]) : null,
+            ]];
+        });
 
         return view('workshop-deliveries.create', [
             'accounts' => $accounts,
@@ -90,7 +97,7 @@ class WorkshopDeliveryController extends Controller
         $message = "{$delivery->number} çıkışı kaydedildi: ".Amount::format($delivery->gross_out, $gr)
             .' × '.Workshop::formatPurity($delivery->purity_out)
             .' = '.Amount::format($delivery->has_out, $gr).' has müşterinin carisine borç yazıldı.'
-            .' Müşterinin atölyede kalanı: '.Amount::formatMilli($kalan, $gr).'.';
+            .($delivery->isSale() ? ' (Satış: ramatı etkilemez.)' : ' Müşterinin atölyede kalanı: '.Amount::formatMilli($kalan, $gr).'.');
 
         return redirect()->route('workshop-deliveries.index')
             ->with('success', $message)

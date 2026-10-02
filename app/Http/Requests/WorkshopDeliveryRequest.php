@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Currency;
+use App\Models\WorkOrderDelivery;
 use App\Support\Amount;
 use App\Support\Workshop;
 use App\Support\WorkshopTotals;
@@ -10,7 +11,7 @@ use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/** Atölyeden müşteriye çıkış: müşteri, gram, çıkış milyemi. Bir giriş fişine bağlı değildir. */
+/** Atölyeden müşteriye çıkış (atölye ürünü ya da satış): müşteri, gram, çıkış milyemi. Giriş fişine bağlı değildir. */
 class WorkshopDeliveryRequest extends FormRequest
 {
     public function authorize(): bool
@@ -22,6 +23,7 @@ class WorkshopDeliveryRequest extends FormRequest
     {
         return [
             'account_id' => ['required', Rule::exists('accounts', 'id')],
+            'kind' => ['required', Rule::in([WorkOrderDelivery::KIND_ATOLYE, WorkOrderDelivery::KIND_SATIS])],
             'product' => ['nullable', 'string', 'max:255'],
             'delivered_at' => ['required', 'date'],
             'gross_out' => ['required', function (string $attribute, mixed $value, Closure $fail) {
@@ -31,12 +33,13 @@ class WorkshopDeliveryRequest extends FormRequest
                     $fail('Çıkış gramı geçersiz. Örnek: 6,97 veya 160');
                 } elseif (Amount::decimalsOf($parsed) > 3) {
                     $fail('Gram en fazla 3 ondalık basamak olabilir.');
-                } elseif ($this->filled('account_id')) {
+                } elseif ($this->filled('account_id') && $this->input('kind') === WorkOrderDelivery::KIND_ATOLYE) {
+                    // Atölyedeki üründen çıkış, müşterinin kalanını aşamaz (satışta sınır yok)
                     $ramat = WorkshopTotals::forAccount((int) $this->input('account_id'))['ramat_gram'];
 
                     if (Amount::toMilli($parsed) > $ramat) {
                         $kalan = Amount::formatMilli(max($ramat, 0), new Currency(['symbol' => 'gr', 'decimals' => 3]));
-                        $fail("Çıkış, bu müşterinin atölyede kalan ürününden ({$kalan}) fazla olamaz.");
+                        $fail("Çıkış, bu müşterinin atölyede kalan ürününden ({$kalan}) fazla olamaz. Kendi ürününüzse türü \"Kendi ürünüm (satış)\" seçin.");
                     }
                 }
             }],
@@ -53,6 +56,7 @@ class WorkshopDeliveryRequest extends FormRequest
     {
         return [
             'account_id' => 'müşteri',
+            'kind' => 'çıkış türü',
             'product' => 'ürün',
             'delivered_at' => 'çıkış tarihi',
             'gross_out' => 'çıkış gramı',

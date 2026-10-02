@@ -63,7 +63,9 @@ class RamatController extends Controller
                 'url' => route('work-orders.show', $o), 'sort' => 'a'.$o->id,
             ]);
 
+        // Satış çıkışları ramatı etkilemediği için burada gösterilmez
         $out = WorkOrderDelivery::query()->where('account_id', $account->id)
+            ->where('kind', WorkOrderDelivery::KIND_ATOLYE)
             ->when($from, fn ($q) => $q->where('delivered_at', '>=', $from))
             ->when($until, fn ($q) => $q->where('delivered_at', '<', $until))
             ->get()

@@ -17,10 +17,27 @@ use Illuminate\Support\Facades\DB;
  *
  * purity_out: çıkış milyemi, işçilik dahil (ör. 0,625). Has = gram × çıkış milyemi.
  * Bu has müşterinin carisine BORÇ yazılır (müşteriye has borcumuz düşer).
+ *
+ * kind: KIND_ATOLYE = müşterinin atölyedeki ürününden (ramattan düşer),
+ *       KIND_SATIS  = atölyenin kendi ürünü, ör. müşterinin verdiği has karşılığı (ramatı etkilemez).
  */
-#[Fillable(['account_id', 'product', 'delivered_at', 'gross_out', 'purity_out', 'notes'])]
+#[Fillable(['account_id', 'kind', 'product', 'delivered_at', 'gross_out', 'purity_out', 'notes'])]
 class WorkOrderDelivery extends Model
 {
+    public const KIND_ATOLYE = 'atolye';
+
+    public const KIND_SATIS = 'satis';
+
+    public function isSale(): bool
+    {
+        return $this->kind === self::KIND_SATIS;
+    }
+
+    public function kindLabel(): string
+    {
+        return $this->isSale() ? 'Satış' : 'Atölye';
+    }
+
     protected function casts(): array
     {
         return [
@@ -35,6 +52,7 @@ class WorkOrderDelivery extends Model
     {
         static::creating(function (WorkOrderDelivery $delivery) {
             $delivery->number ??= static::nextNumber();
+            $delivery->kind ??= self::KIND_ATOLYE;
         });
 
         static::deleted(function (WorkOrderDelivery $delivery) {
@@ -82,7 +100,7 @@ class WorkOrderDelivery extends Model
                 $this->delivered_at,
                 $this->account_id,
                 $this->number,
-                "Atölye çıkışı: {$what}({$grams} × ".Workshop::formatPurity($this->purity_out).')',
+                ($this->isSale() ? 'Satış: ' : 'Atölye çıkışı: ')."{$what}({$grams} × ".Workshop::formatPurity($this->purity_out).')',
                 $userId,
             );
 

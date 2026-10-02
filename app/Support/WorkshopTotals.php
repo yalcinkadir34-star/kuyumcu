@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Atölye toplamları, müşteri bazında. Giriş (work_orders) ve çıkış (work_order_deliveries)
- * birbirinden bağımsızdır; ramat = müşterinin girişleri − çıkışları.
+ * birbirinden bağımsızdır; ramat = müşterinin girişleri − atölye çıkışları.
+ * "Satış" türündeki çıkışlar (atölyenin kendi ürünü) bu toplamlara girmez.
  *
  * Değerler "binde bir" birimli tam sayılardır (bkz. Amount).
  *   ramat_has: ramat gramı × müşterinin ortalama giriş milyemi (giriş has / giriş gram)
@@ -31,7 +32,9 @@ class WorkshopTotals
             ->selectRaw('account_id, COUNT(*) as adet, SUM(gross_in) as gram, SUM(has_in) as has')
             ->get()->keyBy('account_id');
 
+        // Sadece atölyedeki üründen yapılan çıkışlar ramatı etkiler (satış çıkışları hariç)
         $out = DB::table('work_order_deliveries')
+            ->where('kind', 'atolye')
             ->when($accountIds !== null, fn ($q) => $q->whereIn('account_id', $accountIds))
             ->when($from, fn ($q) => $q->where('delivered_at', '>=', $from))
             ->when($until, fn ($q) => $q->where('delivered_at', '<', $until))

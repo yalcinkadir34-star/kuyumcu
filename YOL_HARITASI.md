@@ -537,6 +537,21 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
   `WorkOrder`'dan fişe bağlı çıkış/kalan metotları kaldırıldı
 - Testler: 87 test, hepsi geçiyor
 
+### ✅ v0.8.1: Atölyede girişi olmayan müşteriye satış çıkışı (02.10.2026)
+- **Kullanıcı:** "Atölyede girişi olmayan ama carisi kayıtlı olan kişiye çıkış yapabileyim. Bazen müşteri bana has altın
+  veriyor, ben ürünü kendim işleyip satıyorum."
+- Çıkışa **tür** eklendi (`work_order_deliveries.kind`):
+  - **atolye** = "Atölyedeki ürününden": müşterinin getirdiği ürün. Ramattan düşer, müşterinin kalanını aşamaz
+  - **satis** = "Kendi ürünüm (satış)": atölyenin kendi ürünü. **Ramatı etkilemez**, sınır yok
+  - İki türde de has müşterinin carisine **borç** yazılır (cari açıklaması "Satış: …" / "Atölye çıkışı: …")
+- Çıkış formunda **tüm aktif cariler** listelenir. Müşteri seçilince atölyede ürünü yoksa tür otomatik "satış" olur,
+  varsa "atölye". Satışta "atölyede kalacak" kutusu gizlenir
+- Çıkışlar listesinde satışlar **"Satış"** etiketiyle. Müşteri raporunda "Satış · ürün"
+- Ramat toplamları, Ramat sayfası ve bilançodaki "Atölyede" sütunu **sadece atölye çıkışlarını** sayar
+- Müşterinin verdiği has altın: Hareketler'den **Cari Alacaklandırma** (ya da kasaya girdiyse **Tahsilat**), birim Has
+- Mevcut 3 çıkış "atolye" türünde. Yedek: `storage/app/yedek/kuyumcu-2026-10-02-cikis-turu-oncesi.sql`
+- Testler: 90 test, hepsi geçiyor
+
 ### 🧪 Deneme carisi
 - **`halit` (C00005, id 6)** kullanıcının **deneme/demo** carisidir. Bu caride yapılan işlemler denemedir
 - Kullanıcı "sil" dediğinde: önce veritabanı yedeği alınır, sonra bu carinin **hareketleri, atölye girişleri, atölye çıkışları

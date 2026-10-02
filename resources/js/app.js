@@ -161,7 +161,9 @@ if (deliveryForm) {
     const out = deliveryForm.querySelector('[data-gross-out]');
     const purityOut = deliveryForm.querySelector('[data-purity-out]');
     const remainingText = deliveryForm.querySelector('[data-delivery-remaining]');
+    const kinds = deliveryForm.querySelectorAll('[data-delivery-kind]');
     const set = (selector, text) => (deliveryForm.querySelector(selector).textContent = text);
+    const kind = () => deliveryForm.querySelector('[data-delivery-kind]:checked')?.value ?? 'atolye';
 
     const update = () => {
         const selected = info[account.value];
@@ -171,12 +173,22 @@ if (deliveryForm) {
 
         set('[data-preview-has]', gramOut > 0 && total > 0 ? formatNumber(hasOf(gramOut, total)) : '—');
         set('[data-preview-remaining]', Number.isFinite(remaining) ? formatNumber(gramOut > 0 ? remaining - gramOut : remaining) : '—');
+
+        // Satışta ramat değişmez: "kalacak" kutusu gizlenir
+        deliveryForm.querySelector('[data-preview-remaining-box]').classList.toggle('invisible', kind() !== 'atolye');
     };
 
-    const onAccount = () => {
+    const onAccount = (event) => {
         const selected = info[account.value];
         remainingText.textContent = selected ? `Atölyede kalan ürünü: ${selected.kalan}` : '';
         if (selected?.sonMilyem && purityOut.value === '') purityOut.value = selected.sonMilyem;
+
+        // Müşteri değiştirilince türü öner: atölyede ürünü yoksa satış
+        if (event && selected) {
+            const target = Number(selected.kalanSayi) > 0 ? 'atolye' : 'satis';
+            kinds.forEach((radio) => (radio.checked = radio.value === target));
+        }
+
         update();
     };
 
