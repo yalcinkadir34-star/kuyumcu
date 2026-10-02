@@ -4,18 +4,33 @@
 
 <div class="card" data-workorder-form data-last-purities='@json($lastPurities)'>
     <div class="grid gap-5 p-5 sm:grid-cols-2">
-        <div class="sm:col-span-2">
+        <div class="sm:col-span-2" data-quick-account data-url="{{ route('accounts.quick-store') }}">
             <label for="account_id" class="label">Firma <span class="text-red-500">*</span></label>
-            <select id="account_id" name="account_id" data-account required class="input @error('account_id') input-error @enderror">
-                <option value="">Firma seçin…</option>
-                @foreach ($accounts as $account)
-                    <option value="{{ $account->id }}" @selected((int) old('account_id', $order->account_id) === $account->id)>{{ $account->name }} ({{ $account->code }})</option>
-                @endforeach
-            </select>
+            <div class="flex gap-2">
+                <select id="account_id" name="account_id" data-account required class="input @error('account_id') input-error @enderror">
+                    <option value="">Firma seçin…</option>
+                    @foreach ($accounts as $account)
+                        <option value="{{ $account->id }}" @selected((int) old('account_id', $order->account_id) === $account->id)>{{ $account->name }} ({{ $account->code }})</option>
+                    @endforeach
+                </select>
+                <button type="button" data-quick-account-toggle class="btn btn-secondary shrink-0">
+                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    Yeni Cari
+                </button>
+            </div>
             @error('account_id') <p class="field-error">{{ $message }}</p> @enderror
-            @if ($accounts->isEmpty())
-                <p class="mt-1 text-xs text-stone-500">Önce <a href="{{ route('accounts.create') }}" class="font-medium text-gold-700 hover:underline">cari ekleyin</a>.</p>
-            @endif
+
+            {{-- Hızlı cari ekleme (sayfadan çıkmadan) --}}
+            <div data-quick-account-panel class="mt-3 hidden rounded-lg border border-gold-200 bg-gold-50/60 p-4">
+                <div class="mb-3 text-sm font-medium text-stone-800">Yeni cari ekle</div>
+                <div class="grid gap-3 sm:grid-cols-[1fr_12rem_auto]">
+                    <input data-quick-account-name class="input" placeholder="Cari adı / Ünvan" aria-label="Cari adı" autocomplete="off">
+                    <input data-quick-account-phone type="tel" class="input" placeholder="Telefon (isteğe bağlı)" aria-label="Telefon" autocomplete="off">
+                    <button type="button" data-quick-account-save class="btn btn-primary">Ekle</button>
+                </div>
+                <p data-quick-account-error class="field-error hidden"></p>
+            </div>
+            <p data-quick-account-success class="mt-1 hidden text-xs font-medium text-emerald-700"></p>
         </div>
 
         <div class="sm:col-span-2">

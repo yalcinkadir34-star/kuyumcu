@@ -18,6 +18,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/', DashboardController::class)->name('dashboard');
     Route::post('/cikis', [LoginController::class, 'logout'])->name('logout');
 
+    Route::post('/cariler/hizli-ekle', [AccountController::class, 'quickStore'])->name('accounts.quick-store');
     Route::resource('cariler', AccountController::class)
         ->names('accounts')
         ->parameters(['cariler' => 'account']);

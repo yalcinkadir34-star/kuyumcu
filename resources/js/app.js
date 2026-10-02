@@ -89,6 +89,80 @@ if (workOrderForm) {
     suggest();
 }
 
+// Hızlı cari ekleme: formdan çıkmadan yeni cari oluşturur, listeye ekleyip seçer
+document.querySelectorAll('[data-quick-account]').forEach((box) => {
+    const panel = box.querySelector('[data-quick-account-panel]');
+    const nameInput = box.querySelector('[data-quick-account-name]');
+    const phoneInput = box.querySelector('[data-quick-account-phone]');
+    const saveButton = box.querySelector('[data-quick-account-save]');
+    const error = box.querySelector('[data-quick-account-error]');
+    const success = box.querySelector('[data-quick-account-success]');
+    const select = box.querySelector('select');
+    const token = box.closest('form')?.querySelector('input[name="_token"]')?.value;
+
+    const showError = (message) => {
+        error.textContent = message;
+        error.classList.remove('hidden');
+    };
+
+    box.querySelector('[data-quick-account-toggle]').addEventListener('click', () => {
+        panel.classList.toggle('hidden');
+        success.classList.add('hidden');
+        if (!panel.classList.contains('hidden')) nameInput.focus();
+    });
+
+    const save = async () => {
+        error.classList.add('hidden');
+
+        if (nameInput.value.trim() === '') {
+            showError('Cari adını yazın.');
+            nameInput.focus();
+            return;
+        }
+
+        saveButton.disabled = true;
+
+        try {
+            const response = await fetch(box.dataset.url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': token },
+                body: JSON.stringify({ name: nameInput.value.trim(), phone: phoneInput.value.trim() }),
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                showError(Object.values(data.errors ?? {})[0]?.[0] ?? 'Cari eklenemedi.');
+                return;
+            }
+
+            select.add(new Option(`${data.name} (${data.code})`, data.id, true, true));
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+
+            nameInput.value = '';
+            phoneInput.value = '';
+            panel.classList.add('hidden');
+            success.textContent = `${data.name} carisi eklendi ve seçildi.`;
+            success.classList.remove('hidden');
+        } catch {
+            showError('Bağlantı hatası, tekrar deneyin.');
+        } finally {
+            saveButton.disabled = false;
+        }
+    };
+
+    saveButton.addEventListener('click', save);
+
+    // Enter tuşu ana formu göndermesin, cariyi eklesin
+    [nameInput, phoneInput].forEach((input) =>
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                save();
+            }
+        }),
+    );
+});
+
 // Atölye çıkış formu: has = gram × (ayar + çıkış işçiliği), kalacak miktar
 const deliverForm = document.querySelector('[data-deliver-form]');
 

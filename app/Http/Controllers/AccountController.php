@@ -10,6 +10,7 @@ use App\Models\Currency;
 use App\Models\Transaction;
 use App\Support\Balances;
 use App\Support\Ledger;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -49,6 +50,25 @@ class AccountController extends Controller
 
         return redirect()->route('accounts.show', $account)
             ->with('success', "{$account->name} carisi oluşturuldu.");
+    }
+
+    /** Formlardan (ör. atölye girişi) sayfadan çıkmadan hızlı cari ekleme. JSON döner. */
+    public function quickStore(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:30'],
+        ], [
+            'name.required' => 'Cari adı zorunludur.',
+        ]);
+
+        $account = Account::create([...$data, 'type' => AccountType::Musteri, 'is_active' => true]);
+
+        return response()->json([
+            'id' => $account->id,
+            'name' => $account->name,
+            'code' => $account->code,
+        ], 201);
     }
 
     public function show(Request $request, Account $account): View

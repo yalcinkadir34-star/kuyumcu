@@ -429,6 +429,14 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Tür filtresi kaldırıldı (durum filtresi ve arama duruyor)
 - Diğer birimler veritabanında ve cari detayında (bakiye kartları, ekstre) duruyor, sadece listeden kaldırıldı
 
+### ✅ v0.5.3: Atölye girişinde hızlı cari ekleme (02.10.2026)
+- **Kullanıcı isteği:** "Atölye giriş kısmında firma yoksa oraya bir buton koy, cari ekle diye"
+- Firma seçiminin yanında **"+ Yeni Cari"** butonu: formun içinde küçük bir alan açılır (ad + isteğe bağlı telefon)
+  - **Ekle** (ya da Enter) → cari oluşturulur, listeye eklenir ve **otomatik seçilir**. Sayfadan çıkılmaz, girilen bilgiler kaybolmaz
+  - Yeni cari türü "Müşteri", aktif. Diğer bilgiler sonra Cariler sayfasından düzenlenebilir
+- Arka uç: `POST /cariler/hizli-ekle` (`accounts.quick-store`), JSON döner, ad zorunlu
+- Testler: 86 test, hepsi geçiyor
+
 ---
 
 ## 5. Yapılacaklar

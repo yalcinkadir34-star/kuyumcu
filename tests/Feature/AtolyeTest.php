@@ -321,6 +321,27 @@ class AtolyeTest extends TestCase
             ->assertSee('80mm auto', false);
     }
 
+    public function test_atolye_girisinden_hizli_cari_eklenir(): void
+    {
+        $this->actingAs($this->user)->get(route('work-orders.create'))->assertOk()->assertSee('Yeni Cari');
+
+        $this->postJson(route('accounts.quick-store'), ['name' => 'Yeni Döküm', 'phone' => '0555 000 11 22'])
+            ->assertCreated()
+            ->assertJson(['name' => 'Yeni Döküm', 'code' => 'C00002']);
+
+        $cari = Account::firstWhere('name', 'Yeni Döküm');
+        $this->assertSame('0555 000 11 22', $cari->phone);
+        $this->assertTrue($cari->is_active);
+    }
+
+    public function test_hizli_cari_eklemede_ad_zorunlu(): void
+    {
+        $this->actingAs($this->user)
+            ->postJson(route('accounts.quick-store'), ['name' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['name' => 'Cari adı zorunludur.']);
+    }
+
     public function test_baska_fisin_cikisi_ile_fis_acilmaz(): void
     {
         $a = $this->giris();
