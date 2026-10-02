@@ -441,6 +441,15 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 
 ## 5. Yapılacaklar
 
+### ✅ v0.5.4: Müşteri fişi sadeleşti (02.10.2026)
+- **Kullanıcı isteği:** "Fişte giriş gramına ihtiyaç yok. Fişte çıkış gramını ve müşterinin son bakiyesini göstereceğiz.
+  Müşteri atölyeden çıkan ürünün gramını ve son durumunu görecek."
+- Fişten **giriş bölümü** (gram, milyem, has) ve **atölyede kalan** satırı kaldırıldı
+- Fiş içeriği: başlık, fiş no, tarih, müşteri, ürün · **ÇIKAN ÜRÜN** (gram, milyem, has) · **SON DURUM** · imza
+- **Son durum = bu çıkıştan hemen sonraki bakiye** (`Balances::forAccountUntil`). Fiş sonradan tekrar yazdırılsa da
+  aynı rakamı gösterir, araya giren işlemler fişi değiştirmez. Bakiye sıfırsa "Hesabınız kapalı (bakiye yok)"
+- Testler: 86 test, hepsi geçiyor
+
 ### 🧪 Deneme carisi
 - **`halit` (C00005, id 6)** kullanıcının **deneme/demo** carisidir. Bu caride yapılan işlemler denemedir
 - Kullanıcı "sil" dediğinde: önce veritabanı yedeği alınır, sonra bu carinin **hareketleri, atölye fişleri (çıkışlarıyla)

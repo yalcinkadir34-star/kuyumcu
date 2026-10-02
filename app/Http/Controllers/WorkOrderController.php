@@ -9,6 +9,7 @@ use App\Models\Currency;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderDelivery;
 use App\Support\Amount;
+use App\Support\Balances;
 use App\Support\Workshop;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -140,16 +141,19 @@ class WorkOrderController extends Controller
     {
         $workOrder->load(['account', 'deliveries']);
 
-        // Bu çıkışın fişteki sırası ve bu çıkıştan sonra atölyede kalan miktar
-        $upToThis = $workOrder->deliveries->takeUntil(fn ($d) => $d->id === $delivery->id)->push($delivery);
-        $deliveredUntil = $upToThis->sum(fn ($d) => Amount::toMilli($d->gross_out));
+        // Bu çıkışın fişteki sırası
+        $sequence = $workOrder->deliveries->takeUntil(fn ($d) => $d->id === $delivery->id)->count() + 1;
+
+        // Müşterinin bu çıkıştan hemen sonraki bakiyesi (fiş sonradan yazdırılsa da değişmez)
+        $balances = $delivery->out_transaction_id
+            ? Balances::forAccountUntil($workOrder->account_id, $delivery->delivered_at->format('Y-m-d H:i:s'), $delivery->out_transaction_id)
+            : $workOrder->account->balances();
 
         return view('work-orders.receipt', [
             'order' => $workOrder,
             'delivery' => $delivery,
-            'sequence' => $upToThis->count(),
-            'remainingAfter' => Amount::toMilli($workOrder->gross_in) - $deliveredUntil,
-            'balances' => $workOrder->account->balances(),
+            'sequence' => $sequence,
+            'balances' => $balances,
             'currencies' => Currency::query()->orderBy('sort')->get()->keyBy('id'),
             'size' => $request->query('boyut') === '80' ? '80' : 'a5',
             'firma' => config('kuyumcu.firma'),

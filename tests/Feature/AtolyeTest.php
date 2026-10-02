@@ -303,21 +303,20 @@ class AtolyeTest extends TestCase
             ->assertSee('A00001-1')
             ->assertSee('Döküm Firması')
             ->assertSee('14 ayar zincir')
-            ->assertSee('26,250 gr')   // giriş
-            ->assertSee('0,595')       // giriş milyemi
-            ->assertSee('15,618 gr')   // giriş has
-            ->assertSee('6,970 gr')    // çıkış
+            ->assertSee('6,970 gr')    // çıkış gramı
             ->assertSee('0,625')       // çıkış milyemi
             ->assertSee('4,356 gr')    // çıkış has
-            ->assertSee('19,280 gr')   // bu çıkıştan sonra atölyede kalan
-            ->assertSee('Alacağınız')  // firmaya has borcumuz var
+            ->assertDontSee('26,250 gr')  // giriş bilgisi fişte yok
+            ->assertDontSee('Atölyede kalan')
+            // Son durum: 15,618 alacak − 4,356 = 11,262 (ikinci çıkış sonradan yapıldı ama bu fişi etkilemez)
+            ->assertSeeInOrder(['SON DURUM', 'Alacağınız (Has)', '11,262 gr'])
             ->assertSee('Bu fiş bilgi amaçlıdır.');
 
-        // İkinci çıkışın fişi: sıra no 2, kalan 14,28
+        // İkinci çıkışın fişi: sıra no 2, son durum 11,262 − 5 × 0,625 = 8,137
         $this->get(route('work-orders.deliveries.receipt', [$order, $ikinci, 'boyut' => '80']))
             ->assertOk()
             ->assertSee('A00001-2')
-            ->assertSee('14,280 gr')
+            ->assertSee('8,137 gr')
             ->assertSee('80mm auto', false);
     }
 

@@ -34,6 +34,26 @@ class Balances
     }
 
     /**
+     * Bir carinin, verilen hareket anına kadarki (o hareket dahil) bakiyesi.
+     * Fişlerde "bu işlemden sonraki bakiye" için: fiş sonradan yazdırılsa da aynı kalır.
+     *
+     * @return array<int, int> currency_id => milli
+     */
+    public static function forAccountUntil(int $accountId, string $dateTime, int $transactionId): array
+    {
+        $rows = DB::table('transactions')
+            ->where('account_id', $accountId)
+            ->where('account_direction', '!=', 0)
+            ->where(fn ($q) => $q->where('date', '<', $dateTime)
+                ->orWhere(fn ($q) => $q->where('date', $dateTime)->where('id', '<=', $transactionId)))
+            ->groupBy('account_id', 'currency_id')
+            ->selectRaw('account_id, currency_id, SUM(amount * account_direction) as total')
+            ->get();
+
+        return self::group($rows, 'account_id')[$accountId] ?? [];
+    }
+
+    /**
      * @param  array<int>  $cashRegisterIds
      * @return array<int, array<int, int>> cash_register_id => [currency_id => milli]
      */

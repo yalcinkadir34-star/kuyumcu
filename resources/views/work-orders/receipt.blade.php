@@ -61,22 +61,9 @@
             <div class="flex justify-between gap-2"><dt class="text-stone-500">Ürün</dt><dd class="text-right">{{ $order->product }}</dd></div>
         </dl>
 
-        {{-- Giriş --}}
+        {{-- Çıkan ürün --}}
         <div class="mt-3 border-t border-dashed border-stone-400 pt-2">
-            <div class="font-semibold">GİRİŞ · {{ $order->received_at->format('d.m.Y H:i') }}</div>
-            <dl class="mt-1 space-y-0.5">
-                <div class="flex justify-between"><dt>Gram</dt><dd class="tabular-nums">{{ Amount::format($order->gross_in, $gr) }}</dd></div>
-                <div class="flex justify-between">
-                    <dt>Milyem <span class="text-stone-500">({{ $p($order->purity) }} + {{ $p($order->labor_purity_in) }})</span></dt>
-                    <dd class="tabular-nums">{{ $p($order->inPurity()) }}</dd>
-                </div>
-                <div class="flex justify-between font-semibold"><dt>Has</dt><dd class="tabular-nums">{{ Amount::format($order->has_in, $gr) }}</dd></div>
-            </dl>
-        </div>
-
-        {{-- Bu çıkış --}}
-        <div class="mt-3 border-t border-dashed border-stone-400 pt-2">
-            <div class="font-semibold">ÇIKIŞ · {{ $delivery->delivered_at->format('d.m.Y H:i') }}</div>
+            <div class="font-semibold">ÇIKAN ÜRÜN</div>
             <dl class="mt-1 space-y-0.5">
                 <div class="flex justify-between"><dt>Gram</dt><dd class="tabular-nums">{{ Amount::format($delivery->gross_out, $gr) }}</dd></div>
                 <div class="flex justify-between">
@@ -89,29 +76,21 @@
             </dl>
         </div>
 
-        @if ($remainingAfter > 0)
-            <div class="mt-2 flex justify-between">
-                <span>Atölyede kalan</span>
-                <span class="tabular-nums">{{ Amount::formatMilli($remainingAfter, $gr) }}</span>
-            </div>
-        @endif
-
-        {{-- Hesap durumu --}}
-        @if (array_filter($balances))
-            <div class="mt-3 border-t border-dashed border-stone-400 pt-2">
-                <div class="font-semibold">HESAP DURUMU <span class="font-normal text-stone-500">({{ now()->format('d.m.Y H:i') }})</span></div>
-                <dl class="mt-1 space-y-0.5">
-                    @foreach ($currencies as $currencyId => $currency)
-                        @php $milli = $balances[$currencyId] ?? 0; @endphp
-                        @continue($milli === 0)
-                        <div class="flex justify-between">
-                            <dt>{{ $milli < 0 ? 'Alacağınız' : 'Borcunuz' }} ({{ $currency->code === 'HAS' ? 'Has' : $currency->code }})</dt>
-                            <dd class="font-semibold tabular-nums">{{ Amount::formatMilli(abs($milli), $currency) }}</dd>
-                        </div>
-                    @endforeach
-                </dl>
-            </div>
-        @endif
+        {{-- Son durum: bu çıkıştan sonraki bakiye --}}
+        <div class="mt-3 border-t border-dashed border-stone-400 pt-2">
+            <div class="font-semibold">SON DURUM</div>
+            <dl class="mt-1 space-y-0.5">
+                @forelse (collect($currencies)->filter(fn ($c, $id) => ($balances[$id] ?? 0) !== 0) as $currencyId => $currency)
+                    @php $milli = $balances[$currencyId]; @endphp
+                    <div @class(['flex justify-between font-bold', 'text-base' => ! $small, 'text-xs' => $small])>
+                        <dt>{{ $milli < 0 ? 'Alacağınız' : 'Borcunuz' }} ({{ $currency->code === 'HAS' ? 'Has' : $currency->code }})</dt>
+                        <dd class="tabular-nums">{{ Amount::formatMilli(abs($milli), $currency) }}</dd>
+                    </div>
+                @empty
+                    <div class="font-semibold">Hesabınız kapalı (bakiye yok)</div>
+                @endforelse
+            </dl>
+        </div>
 
         {{-- İmza --}}
         <div class="mt-6 grid grid-cols-2 gap-4 text-center">
