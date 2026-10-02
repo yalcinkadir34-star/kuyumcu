@@ -43,13 +43,6 @@ const parsePurity = (value) => {
     return number > 1 && number <= 1000 ? number / 1000 : number;
 };
 
-// İşçilik milyemi: "0,040" → 0.04, "40" → 0.04 (binde), boş → 0
-const parseLaborPurity = (value) => {
-    if (String(value ?? '').trim() === '') return 0;
-    const number = parseNumber(value);
-    return number >= 1 ? number / 1000 : number;
-};
-
 const formatNumber = (number, decimals = 3) =>
     Number.isFinite(number)
         ? number.toLocaleString('tr-TR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
@@ -58,29 +51,25 @@ const formatNumber = (number, decimals = 3) =>
 // Has hesabı: küsurat atılır (sunucudaki Workshop::hasMilli ile aynı), 15,61875 → 15,618
 const hasOf = (gram, purity) => Math.trunc(Math.round(gram * purity * 1e7) / 1e4) / 1000;
 
-// Atölye giriş formu: has = gram × (ayar + giriş işçiliği); firmanın son değerlerini öner
+// Atölye giriş formu: has = gram × milyem; firmanın son milyemini öner
 const workOrderForm = document.querySelector('[data-workorder-form]');
 
 if (workOrderForm) {
     const gram = workOrderForm.querySelector('[data-gram]');
     const purity = workOrderForm.querySelector('[data-purity]');
-    const labor = workOrderForm.querySelector('[data-labor-in]');
     const account = workOrderForm.querySelector('[data-account]');
     const hint = workOrderForm.querySelector('[data-purity-hint]');
     const lastPurities = JSON.parse(workOrderForm.dataset.lastPurities || '{}');
 
     const update = () => {
-        const total = parsePurity(purity.value) + parseLaborPurity(labor.value);
-        const has = hasOf(parseNumber(gram.value), total);
-        workOrderForm.querySelector('[data-in-purity]').textContent = total > 0 ? formatNumber(total) : '—';
+        const has = hasOf(parseNumber(gram.value), parsePurity(purity.value));
         workOrderForm.querySelector('[data-has-out]').textContent = has > 0 ? formatNumber(has) : '—';
     };
 
     const suggest = () => {
         const last = lastPurities[account.value];
-        hint.textContent = last ? `Bu firmanın son girişi: ayar ${last.purity}, işçilik ${last.labor}` : '';
-        if (last && purity.value === '') purity.value = last.purity;
-        if (last && labor.value === '') labor.value = last.labor;
+        hint.textContent = last ? `Bu firmanın son girişi: ${last}` : '';
+        if (last && purity.value === '') purity.value = last;
         update();
     };
 
@@ -163,29 +152,21 @@ document.querySelectorAll('[data-quick-account]').forEach((box) => {
     );
 });
 
-// Atölye çıkış formu: has = gram × (ayar + çıkış işçiliği), kalacak miktar
+// Atölye çıkış formu: has = gram × çıkış milyemi, kalacak miktar
 const deliverForm = document.querySelector('[data-deliver-form]');
 
 if (deliverForm) {
     const remaining = Number(deliverForm.dataset.remaining);
-    const purity = Number(deliverForm.dataset.purity);
     const out = deliverForm.querySelector('[data-gross-out]');
-    const labor = deliverForm.querySelector('[data-labor-purity]');
+    const purityOut = deliverForm.querySelector('[data-purity-out]');
     const set = (selector, text) => (deliverForm.querySelector(selector).textContent = text);
 
     const update = () => {
         const gramOut = parseNumber(out.value);
-        const total = purity + parseLaborPurity(labor.value);
+        const total = parsePurity(purityOut.value);
 
-        set('[data-out-purity]', formatNumber(total));
-
-        if (gramOut > 0) {
-            set('[data-preview-has]', formatNumber(hasOf(gramOut, total)));
-            set('[data-preview-remaining]', formatNumber(remaining - gramOut));
-        } else {
-            set('[data-preview-has]', '—');
-            set('[data-preview-remaining]', formatNumber(remaining));
-        }
+        set('[data-preview-has]', gramOut > 0 && total > 0 ? formatNumber(hasOf(gramOut, total)) : '—');
+        set('[data-preview-remaining]', formatNumber(gramOut > 0 ? remaining - gramOut : remaining));
     };
 
     deliverForm.addEventListener('input', update);

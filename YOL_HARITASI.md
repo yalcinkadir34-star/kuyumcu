@@ -450,6 +450,21 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
   aynı rakamı gösterir, araya giren işlemler fişi değiştirmez. Bakiye sıfırsa "Hesabınız kapalı (bakiye yok)"
 - Testler: 86 test, hepsi geçiyor
 
+### ✅ v0.5.5: Atölyede işçilik alanları kaldırıldı, milyem doğrudan girilir (02.10.2026)
+- **Kullanıcı isteği:** "Atölye girişinde işçilik kutusunu kaldır, ben bunu milyem kısmından ayarlayabiliyorum."
+  Çıkış için kullanıcıya soruldu: "Çıkışta da milyemi direkt yazayım" seçildi
+- **Giriş:** tek alan **Milyem (işçilik dahil)**, ör. 0,595 → has = gram × milyem
+- **Çıkış:** tek alan **Çıkış milyemi (işçilik dahil)**, ör. 0,625 → has = gram × çıkış milyemi
+  - Varsayılan: bu fişin ya da firmanın son çıkış milyemi
+- Giriş milyemi değişse de çıkışların has'ı değişmez (her çıkışın kendi milyemi var)
+- Atölyede kalan has = kalan gram × giriş milyemi
+- Veritabanı (migration `2026_10_02_000002`): `work_orders.purity` ← ayar + giriş işçiliği,
+  yeni `work_order_deliveries.purity_out` ← ayar + çıkış işçiliği. `labor_purity_in` ve `labor_purity` kaldırıldı.
+  **Has değerleri ve cari bakiyeleri birebir aynı kaldı** (önce/sonra karşılaştırıldı)
+- Kaldırılan kod: `Workshop::parseLaborPurity`, `addPurity`, `laborMilli`, `WorkOrder::inPurity`, `WorkOrderDelivery::outPurity`
+- Yedek: `storage/app/yedek/kuyumcu-2026-10-02-iscilik-kaldirma-oncesi.sql`
+- Testler: 82 test, hepsi geçiyor
+
 ### 🧪 Deneme carisi
 - **`halit` (C00005, id 6)** kullanıcının **deneme/demo** carisidir. Bu caride yapılan işlemler denemedir
 - Kullanıcı "sil" dediğinde: önce veritabanı yedeği alınır, sonra bu carinin **hareketleri, atölye fişleri (çıkışlarıyla)

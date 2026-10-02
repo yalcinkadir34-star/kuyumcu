@@ -85,16 +85,16 @@ class WorkOrderController extends Controller
     {
         $workOrder->load(['account', 'creator', 'deliveries']);
 
-        // Çıkış işçiliği varsayılanı: bu fişin ya da firmanın son çıkışındaki işçilik milyemi
-        $lastLabor = $workOrder->deliveries->last()?->labor_purity
+        // Çıkış milyemi varsayılanı: bu fişin ya da firmanın son çıkışındaki milyem
+        $lastPurityOut = $workOrder->deliveries->last()?->purity_out
             ?? WorkOrderDelivery::query()
                 ->whereHas('workOrder', fn ($q) => $q->where('account_id', $workOrder->account_id))
                 ->latest('id')
-                ->value('labor_purity');
+                ->value('purity_out');
 
         return view('work-orders.show', [
             'order' => $workOrder,
-            'defaultLaborPurity' => $lastLabor,
+            'defaultPurityOut' => $lastPurityOut,
         ]);
     }
 
@@ -125,7 +125,7 @@ class WorkOrderController extends Controller
         $gr = new Currency(['symbol' => 'gr', 'decimals' => 3]);
 
         $message = 'Çıkış kaydedildi: '.Amount::format($delivery->gross_out, $gr)
-            .' × '.Workshop::formatPurity($delivery->outPurity())
+            .' × '.Workshop::formatPurity($delivery->purity_out)
             .' = '.Amount::format($delivery->has_out, $gr).' has cariye borç yazıldı';
 
         $workOrder->unsetRelation('deliveries');
@@ -216,14 +216,11 @@ class WorkOrderController extends Controller
                 ->where(fn ($q) => $q->where('is_active', true)->orWhere('id', $order->account_id))
                 ->orderBy('name')
                 ->get(['id', 'code', 'name']),
-            // Her firmanın son kullandığı ayar ve giriş işçiliği, formda öneri olarak gösterilir
+            // Her firmanın son kullandığı milyem, formda öneri olarak gösterilir
             'lastPurities' => WorkOrder::query()
                 ->whereIn('id', WorkOrder::query()->selectRaw('MAX(id)')->groupBy('account_id'))
-                ->get(['account_id', 'purity', 'labor_purity_in'])
-                ->mapWithKeys(fn (WorkOrder $o) => [$o->account_id => [
-                    'purity' => Workshop::formatPurity($o->purity),
-                    'labor' => Workshop::formatPurity($o->labor_purity_in),
-                ]]),
+                ->get(['account_id', 'purity'])
+                ->mapWithKeys(fn (WorkOrder $o) => [$o->account_id => Workshop::formatPurity($o->purity)]),
         ];
     }
 

@@ -47,7 +47,7 @@
                 <dt class="text-xs font-medium text-stone-500">Giriş · {{ $order->received_at->format('d.m.Y H:i:s') }}</dt>
                 <dd class="mt-1 text-xl font-semibold tabular-nums">{{ Amount::format($order->gross_in, $gr) }}</dd>
                 <dd class="mt-0.5 text-xs text-stone-500">
-                    Ayar {{ $p($order->purity) }} + işçilik {{ $p($order->labor_purity_in) }} = <span class="font-medium text-stone-700">{{ $p($order->inPurity()) }}</span>
+                    Milyem <span class="font-medium text-stone-700">{{ $p($order->purity) }}</span>
                 </dd>
             </div>
             <div class="bg-gold-50/60 p-5">
@@ -68,7 +68,7 @@
                     {{ Amount::formatMilli($remaining, $gr) }}
                 </dd>
                 <dd class="mt-0.5 text-xs text-stone-500">
-                    %{{ number_format($order->remainingRate(), 2, ',', '.') }} · {{ Amount::formatMilli($order->remainingHasMilli(), $gr) }} saf has ({{ $p($order->purity) }})
+                    %{{ number_format($order->remainingRate(), 2, ',', '.') }} · {{ Amount::formatMilli($order->remainingHasMilli(), $gr) }} has
                 </dd>
             </div>
         </dl>
@@ -108,8 +108,7 @@
                                     </td>
                                     <td class="text-right font-medium tabular-nums whitespace-nowrap">{{ Amount::format($delivery->gross_out, $gr) }}</td>
                                     <td class="text-right tabular-nums whitespace-nowrap">
-                                        {{ $p($delivery->outPurity()) }}
-                                        <div class="text-xs text-stone-400">{{ $p($order->purity) }} + {{ $p($delivery->labor_purity) }} işçilik</div>
+                                        {{ $p($delivery->purity_out) }}
                                     </td>
                                     <td class="text-right font-medium tabular-nums whitespace-nowrap text-gold-800">{{ Amount::format($delivery->has_out, $gr) }}</td>
                                     <td class="text-right whitespace-nowrap">
@@ -141,7 +140,7 @@
         <div class="lg:col-span-2">
             @if (! $order->isClosed() && $remaining > 0)
                 <form method="POST" action="{{ route('work-orders.deliver', $order) }}" class="card" data-deliver-form
-                      data-remaining="{{ Amount::fromMilli($remaining) }}" data-purity="{{ $order->purity }}">
+                      data-remaining="{{ Amount::fromMilli($remaining) }}">
                     @csrf
                     <div class="card-header">
                         <h3 class="font-semibold text-stone-900">Yeni Çıkış</h3>
@@ -160,11 +159,11 @@
                         </div>
 
                         <div>
-                            <label for="labor_purity" class="label">Çıkış işçiliği (milyem)</label>
-                            <input id="labor_purity" name="labor_purity" inputmode="decimal" autocomplete="off" data-labor-purity
-                                   value="{{ old('labor_purity', $defaultLaborPurity !== null ? $p($defaultLaborPurity) : '') }}"
-                                   class="input text-right tabular-nums @error('labor_purity') input-error @enderror" placeholder="0,040">
-                            @error('labor_purity') <p class="field-error">{{ $message }}</p> @enderror
+                            <label for="purity_out" class="label">Çıkış milyemi <span class="font-normal text-stone-400">(işçilik dahil)</span> <span class="text-red-500">*</span></label>
+                            <input id="purity_out" name="purity_out" inputmode="decimal" autocomplete="off" required data-purity-out
+                                   value="{{ old('purity_out', $defaultPurityOut !== null ? $p($defaultPurityOut) : '') }}"
+                                   class="input text-right tabular-nums @error('purity_out') input-error @enderror" placeholder="0,625">
+                            @error('purity_out') <p class="field-error">{{ $message }}</p> @enderror
                         </div>
 
                         <div>
@@ -182,12 +181,7 @@
                     </div>
 
                     {{-- Canlı hesap önizlemesi --}}
-                    <div class="grid grid-cols-3 gap-px border-y border-stone-200 bg-stone-200 text-sm">
-                        <div class="bg-white p-3">
-                            <div class="text-xs text-stone-500">Hesap milyemi</div>
-                            <div class="mt-0.5 font-semibold tabular-nums" data-out-purity>—</div>
-                            <div class="text-[11px] text-stone-400">{{ $p($order->purity) }} + işçilik</div>
-                        </div>
+                    <div class="grid grid-cols-2 gap-px border-y border-stone-200 bg-stone-200 text-sm">
                         <div class="bg-white p-3">
                             <div class="text-xs text-stone-500">Cariden düşecek has</div>
                             <div class="mt-0.5 font-semibold tabular-nums text-gold-800"><span data-preview-has>—</span> gr</div>

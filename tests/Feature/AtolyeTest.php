@@ -36,7 +36,6 @@ class AtolyeTest extends TestCase
             'received_at' => '2026-09-01',
             'gross_in' => '200',
             'purity' => '0,585',
-            'labor_purity_in' => '0',
         ])->assertSessionHasNoErrors();
 
         return WorkOrder::latest('id')->first();
@@ -47,7 +46,7 @@ class AtolyeTest extends TestCase
         return $this->actingAs($this->user)->post(route('work-orders.deliver', $order), $data + [
             'delivered_at' => '2026-09-10',
             'gross_out' => '160',
-            'labor_purity' => '0',
+            'purity_out' => '0,585',
         ]);
     }
 
@@ -67,13 +66,12 @@ class AtolyeTest extends TestCase
             'date' => '2026-09-30',
         ]);
 
-        // Giriş: 26,25 gr × (0,585 + 0,010) = 15,61875 → küsurat atılır → 15,618 has
-        $order = $this->giris(['gross_in' => '26,25', 'purity' => '0,585', 'labor_purity_in' => '0,010']);
+        // Giriş: 26,25 gr × 0,595 (işçilik dahil) = 15,61875 → küsurat atılır → 15,618 has
+        $order = $this->giris(['gross_in' => '26,25', 'purity' => '0,595']);
         $this->assertSame('15.618', $order->has_in);
-        $this->assertSame('0.5950', $order->inPurity());
 
-        // Çıkış: 6,97 gr, ayar 0,585 + çıkış işçiliği 0,040 = 0,625 → 4,356 has
-        $this->cikis($order, ['gross_out' => '6,97', 'labor_purity' => '0,040'])->assertSessionHasNoErrors();
+        // Çıkış: 6,97 gr × 0,625 (işçilik dahil) = 4,356 has
+        $this->cikis($order, ['gross_out' => '6,97', 'purity_out' => '0,625'])->assertSessionHasNoErrors();
         $this->assertSame('4.356', $order->deliveries()->first()->has_out);
 
         // Has borcumuz: 46,43 + 15,618 − 4,356 = 57,692. İşçilik ayrıca düşülmez.
@@ -91,20 +89,12 @@ class AtolyeTest extends TestCase
         $this->assertSame(-117_000, $this->hasBakiye());
     }
 
-    public function test_giris_isciligi_bos_birakilirsa_sifir_sayilir(): void
-    {
-        $order = $this->giris(['labor_purity_in' => '']);
-
-        $this->assertSame('0.0000', $order->labor_purity_in);
-        $this->assertSame('117.000', $order->has_in);
-    }
-
     public function test_birden_fazla_cikis_yapilabilir(): void
     {
         $order = $this->giris();
 
-        $this->cikis($order, ['gross_out' => '100', 'labor_purity' => '0,040']);
-        $this->cikis($order, ['gross_out' => '60', 'labor_purity' => '0,040']);
+        $this->cikis($order, ['gross_out' => '100', 'purity_out' => '0,625']);
+        $this->cikis($order, ['gross_out' => '60', 'purity_out' => '0,625']);
 
         $order->refresh();
 
@@ -126,17 +116,17 @@ class AtolyeTest extends TestCase
         $this->assertCount(1, $order->deliveries()->get());
     }
 
-    public function test_yanlis_yazilmis_iscilik_milyemi_reddedilir(): void
+    public function test_cikis_milyemi_zorunlu_ve_gecerli_olmali(): void
     {
         $order = $this->giris();
 
-        // "0,40" büyük ihtimalle 0,040 yerine yazılmıştır; 0,200 üstü kabul edilmez
-        $this->cikis($order, ['labor_purity' => '0,40'])->assertSessionHasErrors('labor_purity');
-        $this->cikis($order, ['labor_purity' => 'abc'])->assertSessionHasErrors('labor_purity');
+        $this->cikis($order, ['purity_out' => ''])->assertSessionHasErrors('purity_out');
+        $this->cikis($order, ['purity_out' => 'abc'])->assertSessionHasErrors('purity_out');
+        $this->cikis($order, ['purity_out' => '1,5'])->assertSessionHasErrors('purity_out');
 
-        // Binde yazım kabul edilir: 40 → 0,040
-        $this->cikis($order, ['labor_purity' => '40'])->assertSessionHasNoErrors();
-        $this->assertSame('0.0400', $order->deliveries()->first()->labor_purity);
+        // Binde yazım kabul edilir: 625 → 0,625
+        $this->cikis($order, ['purity_out' => '625'])->assertSessionHasNoErrors();
+        $this->assertSame('0.6250', $order->deliveries()->first()->purity_out);
     }
 
     public function test_fis_kapatilinca_kalan_fire_sayilir_cariye_islenmez(): void
@@ -168,10 +158,10 @@ class AtolyeTest extends TestCase
         $this->assertSame(-117_000, $this->hasBakiye());
     }
 
-    public function test_milyem_duzenlenince_giris_ve_cikislar_yeniden_hesaplanir(): void
+    public function test_giris_milyemi_duzenlenince_giris_hasi_guncellenir_cikis_degismez(): void
     {
         $order = $this->giris();
-        $this->cikis($order, ['labor_purity' => '0,040']);
+        $this->cikis($order, ['purity_out' => '0,625']);
 
         $this->actingAs($this->user)->put(route('work-orders.update', $order), [
             'account_id' => $this->firma->id,
@@ -179,12 +169,11 @@ class AtolyeTest extends TestCase
             'received_at' => '2026-09-01',
             'gross_in' => '200',
             'purity' => '0,595',
-            'labor_purity_in' => '0,010',
         ])->assertSessionHasNoErrors();
 
-        // Giriş 200 × 0,605 = 121, çıkış 160 × 0,635 = 101,6 → 19,4
-        $this->assertSame(-19_400, $this->hasBakiye());
-        $this->assertSame('101.600', $order->deliveries()->first()->has_out);
+        // Giriş 200 × 0,595 = 119, çıkış kendi milyemiyle aynı kalır: 160 × 0,625 = 100 → 19
+        $this->assertSame(-19_000, $this->hasBakiye());
+        $this->assertSame('100.000', $order->deliveries()->first()->has_out);
     }
 
     public function test_giris_cikislardan_az_yapilamaz(): void
@@ -229,13 +218,13 @@ class AtolyeTest extends TestCase
 
     public function test_bilancoda_atolyede_kalan_saf_has_gorunur(): void
     {
-        $order = $this->giris(['labor_purity_in' => '0,010']);
-        $this->cikis($order, ['labor_purity' => '0,040']);
+        $order = $this->giris(['purity' => '0,595']);
+        $this->cikis($order, ['purity_out' => '0,625']);
 
         $ozet = Balances::summary()[Currency::firstWhere('code', 'HAS')->id];
 
-        // Atölyede 40 gr × 0,585 = 23,4 saf has kaldı
-        $this->assertSame(23_400, $ozet['atolye']);
+        // Atölyede 40 gr × 0,595 = 23,8 has kaldı
+        $this->assertSame(23_800, $ozet['atolye']);
         // Firmaya borcumuz: 200 × 0,595 − 160 × 0,625 = 119 − 100 = 19
         $this->assertSame(19_000, $ozet['borc']);
     }
@@ -291,9 +280,9 @@ class AtolyeTest extends TestCase
     {
         config(['kuyumcu.firma' => ['name' => 'Yalçın Atölye', 'phone' => '0555 111 22 33', 'address' => 'Kapalıçarşı']]);
 
-        $order = $this->giris(['gross_in' => '26,25', 'purity' => '0,585', 'labor_purity_in' => '0,010', 'product' => '14 ayar zincir']);
-        $this->cikis($order, ['gross_out' => '6,97', 'labor_purity' => '0,040']);
-        $this->cikis($order, ['gross_out' => '5', 'labor_purity' => '0,040']);
+        $order = $this->giris(['gross_in' => '26,25', 'purity' => '0,595', 'product' => '14 ayar zincir']);
+        $this->cikis($order, ['gross_out' => '6,97', 'purity_out' => '0,625']);
+        $this->cikis($order, ['gross_out' => '5', 'purity_out' => '0,625']);
         [$birinci, $ikinci] = $order->deliveries()->get()->all();
 
         $this->actingAs($this->user)->get(route('work-orders.deliveries.receipt', [$order, $birinci]))

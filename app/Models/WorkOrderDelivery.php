@@ -13,10 +13,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * Atölye fişinden yapılan bir çıkış (teslim). Bir fişin birden fazla çıkışı olabilir.
  *
- * Çıkış has = gram × (ayar milyemi + çıkış işçiliği milyemi), ör. 6,97 × (0,585 + 0,040) = 4,356.
- * Bu has firmanın carisine BORÇ yazılır (firmaya has borcumuz düşer). İşçilik bu hesabın içindedir.
+ * purity_out: çıkış milyemi, işçilik dahil olarak doğrudan girilir (ör. 0,625).
+ * Çıkış has = gram × çıkış milyemi, ör. 6,97 × 0,625 = 4,356.
+ * Bu has firmanın carisine BORÇ yazılır (firmaya has borcumuz düşer).
  */
-#[Fillable(['delivered_at', 'gross_out', 'labor_purity', 'notes'])]
+#[Fillable(['delivered_at', 'gross_out', 'purity_out', 'notes'])]
 class WorkOrderDelivery extends Model
 {
     protected function casts(): array
@@ -24,7 +25,7 @@ class WorkOrderDelivery extends Model
         return [
             'delivered_at' => 'datetime',
             'gross_out' => 'decimal:3',
-            'labor_purity' => 'decimal:4',
+            'purity_out' => 'decimal:4',
             'has_out' => 'decimal:3',
         ];
     }
@@ -41,18 +42,11 @@ class WorkOrderDelivery extends Model
         return $this->belongsTo(WorkOrder::class);
     }
 
-    /** Çıkış hesap milyemi: ayar + çıkış işçiliği (ör. 0,585 + 0,040 = 0,625). */
-    public function outPurity(): string
-    {
-        return Workshop::addPurity($this->workOrder->purity, $this->labor_purity);
-    }
-
     /** Has'ı hesaplar, cari kaydını eşitler ve kaydeder. */
     public function saveWithTransactions(?int $userId = null): void
     {
         $order = $this->workOrder;
-        $this->labor_purity ??= '0.0000';
-        $hasOut = Workshop::hasMilli(Amount::toMilli($this->gross_out), $this->outPurity());
+        $hasOut = Workshop::hasMilli(Amount::toMilli($this->gross_out), $this->purity_out);
 
         $this->has_out = Amount::fromMilli($hasOut);
         $this->created_by ??= $userId;
@@ -67,7 +61,7 @@ class WorkOrderDelivery extends Model
             $this->delivered_at,
             $order->account_id,
             $order->number,
-            "Atölye çıkışı: {$order->product} ({$grams} × ".Workshop::formatPurity($this->outPurity()).')',
+            "Atölye çıkışı: {$order->product} ({$grams} × ".Workshop::formatPurity($this->purity_out).')',
             $userId,
         );
 

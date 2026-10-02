@@ -35,23 +35,6 @@ class WorkshopTest extends TestCase
         }
     }
 
-    public function test_iscilik_milyemi_cozumlenir(): void
-    {
-        $this->assertSame('0.0100', Workshop::parseLaborPurity('0,010'));
-        $this->assertSame('0.0400', Workshop::parseLaborPurity('0,04'));
-        $this->assertSame('0.0400', Workshop::parseLaborPurity('40'));
-        $this->assertSame('0.0000', Workshop::parseLaborPurity(''));
-        $this->assertSame('0.0000', Workshop::parseLaborPurity('0'));
-        $this->assertNull(Workshop::parseLaborPurity('0,40'));  // 0,200 üstü: yazım hatası
-        $this->assertNull(Workshop::parseLaborPurity('abc'));
-    }
-
-    public function test_milyemler_toplanir(): void
-    {
-        $this->assertSame('0.6250', Workshop::addPurity('0.5850', '0.0400'));
-        $this->assertSame('0.5950', Workshop::addPurity('0.5850', '0.0100'));
-    }
-
     public function test_has_karsiligi_hesaplanir(): void
     {
         // 200 gr × 0,585 = 117 gr has
@@ -70,18 +53,6 @@ class WorkshopTest extends TestCase
     {
         $this->assertSame(20.0, Workshop::fireRate(40_000, 200_000));
         $this->assertSame(0.0, Workshop::fireRate(0, 0));
-    }
-
-    public function test_iscilik_hesaplanir(): void
-    {
-        // Gram başı 15 TL × 160 gr = 2.400 TL
-        $this->assertSame(2_400_000, Workshop::laborMilli('gram', 15_000, 160_000, 2));
-        // Gram başı 0,012 has × 160,5 gr = 1,926 gr has
-        $this->assertSame(1_926, Workshop::laborMilli('gram', 12, 160_500, 3));
-        // Gram başı 2,5 TL × 33,333 gr = 83,3325 → 83,33 TL
-        $this->assertSame(83_330, Workshop::laborMilli('gram', 2_500, 33_333, 2));
-        // Toplam tutar olduğu gibi
-        $this->assertSame(5_000_000, Workshop::laborMilli('toplam', 5_000_000, 160_000, 2));
     }
 
     public function test_milyem_bicimlendirilir(): void

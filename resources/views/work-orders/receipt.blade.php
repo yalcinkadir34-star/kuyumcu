@@ -67,8 +67,8 @@
             <dl class="mt-1 space-y-0.5">
                 <div class="flex justify-between"><dt>Gram</dt><dd class="tabular-nums">{{ Amount::format($delivery->gross_out, $gr) }}</dd></div>
                 <div class="flex justify-between">
-                    <dt>Milyem <span class="text-stone-500">({{ $p($order->purity) }} + {{ $p($delivery->labor_purity) }})</span></dt>
-                    <dd class="tabular-nums">{{ $p($delivery->outPurity()) }}</dd>
+                    <dt>Milyem</dt>
+                    <dd class="tabular-nums">{{ $p($delivery->purity_out) }}</dd>
                 </div>
                 <div @class(['flex justify-between border-y border-stone-900 py-1 font-bold', 'text-base' => ! $small, 'text-xs' => $small])>
                     <dt>Has</dt><dd class="tabular-nums">{{ Amount::format($delivery->has_out, $gr) }}</dd>

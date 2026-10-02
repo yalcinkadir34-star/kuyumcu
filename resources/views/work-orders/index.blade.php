@@ -99,10 +99,7 @@
                             </td>
                             <td class="text-right tabular-nums whitespace-nowrap">{{ Amount::format($order->gross_in, $gr, false) }}</td>
                             <td class="text-right tabular-nums text-stone-600">
-                                {{ Workshop::formatPurity($order->inPurity()) }}
-                                @if ((float) $order->labor_purity_in > 0)
-                                    <div class="text-xs text-stone-400">{{ Workshop::formatPurity($order->purity) }} + {{ Workshop::formatPurity($order->labor_purity_in) }}</div>
-                                @endif
+                                {{ Workshop::formatPurity($order->purity) }}
                             </td>
                             <td class="text-right font-medium tabular-nums whitespace-nowrap text-gold-800">{{ Amount::format($order->has_in, $gr, false) }}</td>
                             <td class="text-right tabular-nums whitespace-nowrap">

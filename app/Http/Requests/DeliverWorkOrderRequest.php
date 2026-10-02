@@ -36,9 +36,9 @@ class DeliverWorkOrderRequest extends FormRequest
                     $fail("Çıkış, atölyede kalan miktardan ({$kalan}) fazla olamaz.");
                 }
             }],
-            'labor_purity' => ['nullable', function (string $attribute, mixed $value, Closure $fail) {
-                if (Workshop::parseLaborPurity((string) $value) === null) {
-                    $fail('Çıkış işçiliği geçersiz. Örnek: 0,040 (en fazla 0,200)');
+            'purity_out' => ['required', function (string $attribute, mixed $value, Closure $fail) {
+                if (Workshop::parsePurity((string) $value) === null) {
+                    $fail('Çıkış milyemi geçersiz. Örnek: 0,625 veya 625');
                 }
             }],
             'notes' => ['nullable', 'string', 'max:255'],
@@ -50,7 +50,7 @@ class DeliverWorkOrderRequest extends FormRequest
         return [
             'delivered_at' => 'çıkış tarihi',
             'gross_out' => 'çıkış gramı',
-            'labor_purity' => 'çıkış işçiliği',
+            'purity_out' => 'çıkış milyemi',
             'notes' => 'not',
         ];
     }
@@ -67,7 +67,7 @@ class DeliverWorkOrderRequest extends FormRequest
         return [
             ...$this->validated(),
             'gross_out' => Amount::parse($this->input('gross_out')),
-            'labor_purity' => Workshop::parseLaborPurity($this->input('labor_purity')),
+            'purity_out' => Workshop::parsePurity($this->input('purity_out')),
         ];
     }
 }
