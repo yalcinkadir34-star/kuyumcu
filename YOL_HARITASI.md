@@ -47,11 +47,20 @@ sunucuda sadece `git pull` + `composer install` yeterli olur.
 
 ## 3. Yerel Geliştirme Ortamı
 
-### Günlük çalıştırma
-1. **Laragon**'u aç → **Start All** (Apache + MySQL başlar)
-2. Tarayıcıda `http://kuyumcu.test` adresine git
-   - Alternatif: proje klasöründe `php artisan serve` → `http://localhost:8000`
-3. Veritabanını görmek için Laragon → **Database** (HeidiSQL açılır, kullanıcı `root`, şifre boş)
+### Günlük çalıştırma (02.10.2026'dan itibaren otomatik)
+- **Windows'a giriş yapınca sistem kendiliğinden açılır.** "Kuyumcu Sistem" görevi MySQL'i ve siteyi başlatır
+  → **http://localhost:8000** (`scripts/sistemi-baslat.ps1`, görev kurulumu: `scripts/windows-baslangic-gorevi.ps1`)
+- Elle başlatmak gerekirse: `powershell -ExecutionPolicy Bypass -File scripts\sistemi-baslat.ps1`
+- Alternatif: Laragon → **Start All** → `http://kuyumcu.test` (MySQL zaten açıksa Laragon uyarı verebilir, zararsız)
+- Veritabanını görmek için: Laragon → **Database** (HeidiSQL açılır, kullanıcı `root`, şifre boş)
+
+### Windows görevleri (Görev Zamanlayıcı)
+| Görev | Ne zaman | Ne yapar |
+|---|---|---|
+| **Kuyumcu Sistem** | Windows girişinde | MySQL + site (localhost:8000) başlatır, açıksa dokunmaz |
+| **Kuyumcu Yedek** | Her gün 10:00, 15:00, 20:00 (kaçarsa açılınca) | `php artisan yedek:al` |
+- İkisi de pencere açmadan (`conhost --headless`) çalışır
+- Kaldırmak: `Unregister-ScheduledTask -TaskName "Kuyumcu Sistem" -Confirm:$false` (yedek için "Kuyumcu Yedek")
 
 ### Yönetici hesabı
 - Kullanıcı adı ve şifre `.env` dosyasında: `ADMIN_USERNAME` / `ADMIN_PASSWORD`
@@ -375,6 +384,14 @@ Symfony Process ortam değişkenlerini `$_SERVER` ile süzdüğü için `SystemR
 
 - Testler: `tests/Feature/YedeklemeTest.php` (Drive çağrıları sahte). Toplam 79 test, hepsi geçiyor
 
+### ✅ Gerçek kullanıma geçiş (02.10.2026)
+- Deneme verileri kullanıcının isteğiyle silindi (MUSTAFA carisi, 4 hareket, A00001/A00002 fişleri).
+  Silmeden önceki yedek: `storage/app/yedek/kuyumcu-2026-10-02-mustafa-silinmeden-once.sql`
+- **Bundan sonraki veriler gerçek.** Migration'larda veri dönüştürürken mutlaka önce yedek alınmalı
+- "Kuyumcu Yedek" görevi kuruldu ve elle tetiklenerek denendi (otomatik yedek başarılı)
+- "Kuyumcu Sistem" başlangıç görevi kuruldu: MySQL ve site kapalıyken görev ikisini de açtı (denendi)
+- Henüz yapılmadı: Google Drive bağlantısı, şifre değiştirme ekranı
+
 ---
 
 ## 5. Yapılacaklar
@@ -395,7 +412,7 @@ Kuyumculuk sektörü için **öneri** niteliğindeki başlıklar:
 - [ ] Atölye fişi yazdırma (giriş/teslim fişi)
 - [x] **Google Drive'a otomatik yedek** + yedek butonu + günde 3 otomatik yedek (v0.4)
   - [ ] Kullanıcı Google Cloud kurulumunu yapıp Drive'ı bağlayacak
-  - [ ] Windows Görev Zamanlayıcı görevi kurulacak (`scripts/windows-yedek-gorevi.ps1`)
+  - [x] Windows Görev Zamanlayıcı görevi kuruldu ve denendi (02.10.2026)
 - [ ] Yedekten geri yükleme ekranı (şimdilik: zip'teki .sql dosyası HeidiSQL ile içe aktarılır)
 - [ ] **Stok**: ürün/hammadde, gram ve ayar bazında takip
 - [ ] **Raporlar**: günlük özet, cari bakiye listesi, has altın durumu
