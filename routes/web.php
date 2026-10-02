@@ -33,6 +33,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::delete('/atolye/{workOrder}/cikis/{delivery}', [WorkOrderController::class, 'destroyDelivery'])
         ->scopeBindings()
         ->name('work-orders.deliveries.destroy');
+    Route::get('/atolye/{workOrder}/cikis/{delivery}/fis', [WorkOrderController::class, 'receipt'])
+        ->scopeBindings()
+        ->name('work-orders.deliveries.receipt');
     Route::post('/atolye/{workOrder}/kapat', [WorkOrderController::class, 'close'])->name('work-orders.close');
     Route::delete('/atolye/{workOrder}/kapat', [WorkOrderController::class, 'reopen'])->name('work-orders.reopen');
 

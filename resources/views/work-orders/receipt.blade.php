@@ -1,0 +1,131 @@
+@use('App\Support\Amount')
+@use('App\Support\Workshop')
+@php
+    $gr = new \App\Models\Currency(['symbol' => 'gr', 'decimals' => 3]);
+    $p = fn ($value) => Workshop::formatPurity($value);
+    $small = $size === '80';
+    $no = $order->number.'-'.$sequence;
+@endphp
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fiş {{ $no }} · {{ $order->account->name }}</title>
+    @vite(['resources/css/app.css'])
+    <style>
+        @page { size: {{ $small ? '80mm auto' : 'A5' }}; margin: {{ $small ? '3mm' : '10mm' }}; }
+        /* Yazdırırken her şey siyah: termal fiş yazıcıları griyi soluk basar */
+        @media print { body { background: #fff !important; } * { color: #000 !important; border-color: #000 !important; } }
+    </style>
+</head>
+<body class="min-h-screen bg-stone-200 font-sans text-stone-900 antialiased print:min-h-0">
+    {{-- Ekran araç çubuğu (yazdırılmaz) --}}
+    <div class="sticky top-0 z-10 flex flex-wrap items-center justify-center gap-2 border-b border-stone-300 bg-white px-4 py-3 shadow-sm print:hidden">
+        <a href="{{ route('work-orders.show', $order) }}" class="btn btn-secondary">← Fişe dön</a>
+        <div class="flex rounded-lg border border-stone-300 p-0.5 text-sm">
+            <a href="{{ request()->fullUrlWithQuery(['boyut' => null]) }}"
+               @class(['rounded-md px-3 py-1.5', 'bg-stone-900 text-white' => ! $small, 'text-stone-600 hover:bg-stone-100' => $small])>Normal (A5)</a>
+            <a href="{{ request()->fullUrlWithQuery(['boyut' => '80']) }}"
+               @class(['rounded-md px-3 py-1.5', 'bg-stone-900 text-white' => $small, 'text-stone-600 hover:bg-stone-100' => ! $small])>Fiş yazıcı (80 mm)</a>
+        </div>
+        <button type="button" onclick="window.print()" class="btn btn-gold">
+            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
+            Yazdır
+        </button>
+    </div>
+
+    {{-- Fiş --}}
+    <div @class([
+        'mx-auto my-6 bg-white shadow-lg print:m-0 print:shadow-none',
+        'w-[148mm] p-[10mm] text-[13px] print:w-auto print:p-0' => ! $small,
+        'w-[74mm] p-[3mm] text-[11px] leading-snug print:w-auto print:p-0' => $small,
+    ])>
+        {{-- Başlık --}}
+        <div class="border-b-2 border-stone-900 pb-2 text-center">
+            <div @class(['font-bold tracking-wide uppercase', 'text-lg' => ! $small, 'text-sm' => $small])>{{ $firma['name'] }}</div>
+            @if ($firma['address'])
+                <div class="text-stone-600">{{ $firma['address'] }}</div>
+            @endif
+            @if ($firma['phone'])
+                <div class="text-stone-600">Tel: {{ $firma['phone'] }}</div>
+            @endif
+        </div>
+
+        <div class="mt-2 text-center font-bold tracking-widest uppercase">Atölye Çıkış Fişi</div>
+
+        <dl class="mt-2 space-y-0.5">
+            <div class="flex justify-between gap-2"><dt class="text-stone-500">Fiş No</dt><dd class="font-mono font-semibold">{{ $no }}</dd></div>
+            <div class="flex justify-between gap-2"><dt class="text-stone-500">Tarih</dt><dd>{{ $delivery->delivered_at->format('d.m.Y') }}</dd></div>
+            <div class="flex justify-between gap-2"><dt class="text-stone-500">Müşteri</dt><dd class="text-right font-semibold">{{ $order->account->name }}</dd></div>
+            <div class="flex justify-between gap-2"><dt class="text-stone-500">Ürün</dt><dd class="text-right">{{ $order->product }}</dd></div>
+        </dl>
+
+        {{-- Giriş --}}
+        <div class="mt-3 border-t border-dashed border-stone-400 pt-2">
+            <div class="font-semibold">GİRİŞ · {{ $order->received_at->format('d.m.Y') }}</div>
+            <dl class="mt-1 space-y-0.5">
+                <div class="flex justify-between"><dt>Gram</dt><dd class="tabular-nums">{{ Amount::format($order->gross_in, $gr) }}</dd></div>
+                <div class="flex justify-between">
+                    <dt>Milyem <span class="text-stone-500">({{ $p($order->purity) }} + {{ $p($order->labor_purity_in) }})</span></dt>
+                    <dd class="tabular-nums">{{ $p($order->inPurity()) }}</dd>
+                </div>
+                <div class="flex justify-between font-semibold"><dt>Has</dt><dd class="tabular-nums">{{ Amount::format($order->has_in, $gr) }}</dd></div>
+            </dl>
+        </div>
+
+        {{-- Bu çıkış --}}
+        <div class="mt-3 border-t border-dashed border-stone-400 pt-2">
+            <div class="font-semibold">ÇIKIŞ · {{ $delivery->delivered_at->format('d.m.Y') }}</div>
+            <dl class="mt-1 space-y-0.5">
+                <div class="flex justify-between"><dt>Gram</dt><dd class="tabular-nums">{{ Amount::format($delivery->gross_out, $gr) }}</dd></div>
+                <div class="flex justify-between">
+                    <dt>Milyem <span class="text-stone-500">({{ $p($order->purity) }} + {{ $p($delivery->labor_purity) }})</span></dt>
+                    <dd class="tabular-nums">{{ $p($delivery->outPurity()) }}</dd>
+                </div>
+                <div @class(['flex justify-between border-y border-stone-900 py-1 font-bold', 'text-base' => ! $small, 'text-xs' => $small])>
+                    <dt>Has</dt><dd class="tabular-nums">{{ Amount::format($delivery->has_out, $gr) }}</dd>
+                </div>
+            </dl>
+        </div>
+
+        @if ($remainingAfter > 0)
+            <div class="mt-2 flex justify-between">
+                <span>Atölyede kalan</span>
+                <span class="tabular-nums">{{ Amount::formatMilli($remainingAfter, $gr) }}</span>
+            </div>
+        @endif
+
+        {{-- Hesap durumu --}}
+        @if (array_filter($balances))
+            <div class="mt-3 border-t border-dashed border-stone-400 pt-2">
+                <div class="font-semibold">HESAP DURUMU <span class="font-normal text-stone-500">({{ now()->format('d.m.Y H:i') }})</span></div>
+                <dl class="mt-1 space-y-0.5">
+                    @foreach ($currencies as $currencyId => $currency)
+                        @php $milli = $balances[$currencyId] ?? 0; @endphp
+                        @continue($milli === 0)
+                        <div class="flex justify-between">
+                            <dt>{{ $milli < 0 ? 'Alacağınız' : 'Borcunuz' }} ({{ $currency->code === 'HAS' ? 'Has' : $currency->code }})</dt>
+                            <dd class="font-semibold tabular-nums">{{ Amount::formatMilli(abs($milli), $currency) }}</dd>
+                        </div>
+                    @endforeach
+                </dl>
+            </div>
+        @endif
+
+        {{-- İmza --}}
+        <div class="mt-6 grid grid-cols-2 gap-4 text-center">
+            <div>
+                <div class="h-10 border-b border-stone-400"></div>
+                <div class="mt-1 text-stone-600">Teslim Eden</div>
+            </div>
+            <div>
+                <div class="h-10 border-b border-stone-400"></div>
+                <div class="mt-1 text-stone-600">Teslim Alan</div>
+            </div>
+        </div>
+
+        <div class="mt-4 text-center text-stone-500">Bu fiş bilgi amaçlıdır.</div>
+    </div>
+</body>
+</html>

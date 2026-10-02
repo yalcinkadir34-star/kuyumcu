@@ -26,6 +26,20 @@
         </x-slot:actions>
     </x-page-header>
 
+    {{-- Yeni çıkıştan sonra: müşteri fişi --}}
+    @if (session('receipt_delivery_id') && ($justDelivered = $order->deliveries->firstWhere('id', session('receipt_delivery_id'))))
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold-200 bg-gold-50 px-5 py-4">
+            <div class="text-sm text-gold-900">
+                <span class="font-semibold">Müşteri fişi hazır.</span>
+                {{ Amount::format($justDelivered->gross_out, $gr) }} çıkış için fişi yazdırıp müşteriye verebilirsiniz.
+            </div>
+            <a href="{{ route('work-orders.deliveries.receipt', [$order, $justDelivered]) }}" target="_blank" class="btn btn-gold">
+                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
+                Fişi Yazdır
+            </a>
+        </div>
+    @endif
+
     {{-- Özet: giriş, çıkan, kalan --}}
     <div class="card">
         <dl class="grid divide-y divide-stone-100 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
@@ -98,9 +112,14 @@
                                         <div class="text-xs text-stone-400">{{ $p($order->purity) }} + {{ $p($delivery->labor_purity) }} işçilik</div>
                                     </td>
                                     <td class="text-right font-medium tabular-nums whitespace-nowrap text-gold-800">{{ Amount::format($delivery->has_out, $gr) }}</td>
-                                    <td class="text-right">
+                                    <td class="text-right whitespace-nowrap">
+                                        <a href="{{ route('work-orders.deliveries.receipt', [$order, $delivery]) }}" target="_blank"
+                                           class="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium text-stone-500 hover:bg-gold-50 hover:text-gold-800" title="Müşteri fişini yazdır">
+                                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
+                                            Fiş
+                                        </a>
                                         @if (auth()->user()->isAdmin())
-                                            <form method="POST" action="{{ route('work-orders.deliveries.destroy', [$order, $delivery]) }}"
+                                            <form method="POST" action="{{ route('work-orders.deliveries.destroy', [$order, $delivery]) }}" class="inline"
                                                   data-confirm="Bu çıkış silinsin mi? Cari kaydı da geri alınacak.">
                                                 @csrf
                                                 @method('DELETE')

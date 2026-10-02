@@ -277,4 +277,58 @@ class AtolyeTest extends TestCase
         $this->get(route('work-orders.show', $kapali))->assertOk()->assertSee('40,000 gr');
         $this->get(route('work-orders.edit', $kapali))->assertOk();
     }
+
+    public function test_cikistan_sonra_musteri_fisi_yazdirma_butonu_cikar(): void
+    {
+        $order = $this->giris();
+
+        $this->cikis($order)->assertSessionHas('receipt_delivery_id');
+
+        $this->followingRedirects()->cikis($order, ['gross_out' => '10'])->assertSee('Fişi Yazdır');
+    }
+
+    public function test_musteri_fisi_bilgileri_gosterir(): void
+    {
+        config(['kuyumcu.firma' => ['name' => 'Yalçın Atölye', 'phone' => '0555 111 22 33', 'address' => 'Kapalıçarşı']]);
+
+        $order = $this->giris(['gross_in' => '26,25', 'purity' => '0,585', 'labor_purity_in' => '0,010', 'product' => '14 ayar zincir']);
+        $this->cikis($order, ['gross_out' => '6,97', 'labor_purity' => '0,040']);
+        $this->cikis($order, ['gross_out' => '5', 'labor_purity' => '0,040']);
+        [$birinci, $ikinci] = $order->deliveries()->get()->all();
+
+        $this->actingAs($this->user)->get(route('work-orders.deliveries.receipt', [$order, $birinci]))
+            ->assertOk()
+            ->assertSee('Yalçın Atölye')
+            ->assertSee('0555 111 22 33')
+            ->assertSee('A00001-1')
+            ->assertSee('Döküm Firması')
+            ->assertSee('14 ayar zincir')
+            ->assertSee('26,250 gr')   // giriş
+            ->assertSee('0,595')       // giriş milyemi
+            ->assertSee('15,618 gr')   // giriş has
+            ->assertSee('6,970 gr')    // çıkış
+            ->assertSee('0,625')       // çıkış milyemi
+            ->assertSee('4,356 gr')    // çıkış has
+            ->assertSee('19,280 gr')   // bu çıkıştan sonra atölyede kalan
+            ->assertSee('Alacağınız')  // firmaya has borcumuz var
+            ->assertSee('Bu fiş bilgi amaçlıdır.');
+
+        // İkinci çıkışın fişi: sıra no 2, kalan 14,28
+        $this->get(route('work-orders.deliveries.receipt', [$order, $ikinci, 'boyut' => '80']))
+            ->assertOk()
+            ->assertSee('A00001-2')
+            ->assertSee('14,280 gr')
+            ->assertSee('80mm auto', false);
+    }
+
+    public function test_baska_fisin_cikisi_ile_fis_acilmaz(): void
+    {
+        $a = $this->giris();
+        $b = $this->giris();
+        $this->cikis($a);
+
+        $this->actingAs($this->user)
+            ->get(route('work-orders.deliveries.receipt', [$b, $a->deliveries()->first()]))
+            ->assertNotFound();
+    }
 }

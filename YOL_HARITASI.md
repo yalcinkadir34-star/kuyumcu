@@ -392,6 +392,23 @@ Symfony Process ortam değişkenlerini `$_SERVER` ile süzdüğü için `SystemR
 - "Kuyumcu Sistem" başlangıç görevi kuruldu: MySQL ve site kapalıyken görev ikisini de açtı (denendi)
 - Henüz yapılmadı: Google Drive bağlantısı, şifre değiştirme ekranı
 
+### ✅ v0.5: Müşteriye atölye çıkış fişi (02.10.2026)
+
+**Kullanıcı isteği:** "Müşteriye bilgi amaçlı fiş vermek istiyoruz, atölyeden çıkan ürünlerde. Basit, anlaşılır, kolay olsun."
+
+- Her çıkışın yanında **"Fiş"** butonu var. Yeni çıkış kaydedilince üstte **"Fişi Yazdır"** kutusu çıkar
+- Fiş sayfası (`/atolye/{fiş}/cikis/{çıkış}/fis`) yeni sekmede açılır: **Yazdır** butonu ve boy seçimi
+  - **Normal (A5)** ve **Fiş yazıcı (80 mm)** (`?boyut=80`). Yazdırırken tüm yazılar siyah basılır (termal yazıcı için)
+- **Fiş içeriği:** firma adı, telefon, adres · fiş no (`A00001-1` = fiş no + çıkış sırası) · tarih · müşteri · ürün
+  · **Giriş** (gram, milyem = ayar + işçilik, has) · **Çıkış** (gram, milyem, **has**) · bu çıkıştan sonra atölyede kalan
+  · **Hesap durumu**: müşterinin güncel bakiyesi, müşteri gözünden ("Alacağınız" / "Borcunuz")
+  · Teslim eden / Teslim alan imza alanı · "Bu fiş bilgi amaçlıdır."
+- **Firma bilgileri** `.env` dosyasında: `FIRMA_ADI`, `FIRMA_TELEFON`, `FIRMA_ADRES` (`config/kuyumcu.php` → `firma`)
+  - ⚠️ Kullanıcı kendi firma adını, telefonunu ve adresini vermeli (şimdilik "Kuyumcu Atölye")
+- Testler: 82 test, hepsi geçiyor
+- Önizleme notu: gerçek veriye dokunmamak için ayrı `kuyumcu_onizleme` veritabanı ve 8001 portu kullanıldı, sonra silindi.
+  `artisan serve` alt sunucuya `DB_DATABASE` aktarmıyor, bu yüzden `php -S ... server.php` ve farklı `SESSION_COOKIE` gerekiyor
+
 ---
 
 ## 5. Yapılacaklar

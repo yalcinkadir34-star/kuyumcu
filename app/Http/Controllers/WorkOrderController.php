@@ -129,7 +129,30 @@ class WorkOrderController extends Controller
         $workOrder->unsetRelation('deliveries');
         $message .= '. Atölyede kalan: '.Amount::formatMilli($workOrder->remainingMilli(), $gr).'.';
 
-        return redirect()->route('work-orders.show', $workOrder)->with('success', $message);
+        return redirect()->route('work-orders.show', $workOrder)
+            ->with('success', $message)
+            ->with('receipt_delivery_id', $delivery->id);
+    }
+
+    /** Müşteriye verilen bilgi fişi (yazdırılabilir). ?boyut=80 → 80 mm fiş yazıcısı */
+    public function receipt(Request $request, WorkOrder $workOrder, WorkOrderDelivery $delivery): View
+    {
+        $workOrder->load(['account', 'deliveries']);
+
+        // Bu çıkışın fişteki sırası ve bu çıkıştan sonra atölyede kalan miktar
+        $upToThis = $workOrder->deliveries->takeUntil(fn ($d) => $d->id === $delivery->id)->push($delivery);
+        $deliveredUntil = $upToThis->sum(fn ($d) => Amount::toMilli($d->gross_out));
+
+        return view('work-orders.receipt', [
+            'order' => $workOrder,
+            'delivery' => $delivery,
+            'sequence' => $upToThis->count(),
+            'remainingAfter' => Amount::toMilli($workOrder->gross_in) - $deliveredUntil,
+            'balances' => $workOrder->account->balances(),
+            'currencies' => Currency::query()->orderBy('sort')->get()->keyBy('id'),
+            'size' => $request->query('boyut') === '80' ? '80' : 'a5',
+            'firma' => config('kuyumcu.firma'),
+        ]);
     }
 
     public function destroyDelivery(Request $request, WorkOrder $workOrder, WorkOrderDelivery $delivery): RedirectResponse
