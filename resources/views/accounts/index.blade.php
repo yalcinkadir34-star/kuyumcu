@@ -3,7 +3,7 @@
 @section('title', 'Cariler')
 
 @section('content')
-    <x-page-header title="Cari Hesaplar" subtitle="Müşteri, tedarikçi ve personel hesapları">
+    <x-page-header title="Cari Hesaplar" subtitle="Müşterilerin has bakiyeleri">
         <x-slot:actions>
             <a href="{{ route('accounts.create') }}" class="btn btn-primary">
                 <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -18,15 +18,6 @@
             <input id="q" name="q" value="{{ request('q') }}" class="input" placeholder="Ad, kod, telefon…">
         </div>
         <div>
-            <label for="tur" class="label">Tür</label>
-            <select id="tur" name="tur" class="input">
-                <option value="">Tümü</option>
-                @foreach ($types as $type)
-                    <option value="{{ $type->value }}" @selected(request('tur') === $type->value)>{{ $type->label() }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div>
             <label for="durum" class="label">Durum</label>
             <select id="durum" name="durum" class="input">
                 <option value="">Tümü</option>
@@ -35,7 +26,7 @@
             </select>
         </div>
         <button class="btn btn-secondary">Filtrele</button>
-        @if (request()->hasAny(['q', 'tur', 'durum']))
+        @if (request()->hasAny(['q', 'durum']))
             <a href="{{ route('accounts.index') }}" class="btn text-stone-500 hover:text-stone-800">Temizle</a>
         @endif
     </form>
@@ -45,40 +36,32 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Kod</th>
-                        <th>Cari</th>
-                        <th>Tür</th>
-                        <th>Telefon</th>
-                        @foreach ($currencies as $currency)
-                            <th class="text-right">{{ $currency->code === 'HAS' ? 'Has (gr)' : $currency->code }}</th>
-                        @endforeach
+                        <th>Müşteri</th>
+                        <th class="text-right">Has (gr)</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($accounts as $account)
                         <tr class="cursor-pointer" onclick="window.location='{{ route('accounts.show', $account) }}'">
-                            <td class="font-mono text-xs text-stone-500">{{ $account->code }}</td>
                             <td>
                                 <a href="{{ route('accounts.show', $account) }}" class="font-medium text-stone-900 hover:text-gold-700">{{ $account->name }}</a>
                                 @unless ($account->is_active)
                                     <span class="badge ml-1 bg-stone-100 text-stone-500 ring-stone-300">Pasif</span>
                                 @endunless
-                                @if ($account->contact_person)
-                                    <div class="text-xs text-stone-500">{{ $account->contact_person }}</div>
+                                <div class="text-xs text-stone-400">
+                                    {{ $account->code }}@if ($account->phone) · {{ $account->phone }}@endif
+                                </div>
+                            </td>
+                            <td class="text-right">
+                                @if ($has)
+                                    <x-cari-bakiye :milli="$balances[$account->id][$has->id] ?? 0" :currency="$has" />
                                 @endif
                             </td>
-                            <td class="text-stone-600">{{ $account->type->label() }}</td>
-                            <td class="whitespace-nowrap text-stone-600">{{ $account->phone ?? '—' }}</td>
-                            @foreach ($currencies as $currency)
-                                <td class="text-right">
-                                    <x-cari-bakiye :milli="$balances[$account->id][$currency->id] ?? 0" :currency="$currency" />
-                                </td>
-                            @endforeach
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ 4 + $currencies->count() }}" class="py-12 text-center text-stone-500">
-                                @if (request()->hasAny(['q', 'tur', 'durum']))
+                            <td colspan="2" class="py-12 text-center text-stone-500">
+                                @if (request()->hasAny(['q', 'durum']))
                                     Aramanıza uyan cari bulunamadı.
                                 @else
                                     Henüz cari eklenmedi. <a href="{{ route('accounts.create') }}" class="font-medium text-gold-700 hover:underline">İlk cariyi ekleyin</a>.

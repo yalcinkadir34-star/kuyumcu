@@ -30,8 +30,8 @@ class AccountController extends Controller
         return view('accounts.index', [
             'accounts' => $accounts,
             'balances' => Balances::forAccounts($accounts->pluck('id')->all()),
-            'currencies' => Currency::activeList(),
-            'types' => AccountType::cases(),
+            // Listede sadece has bakiyesi gösterilir (kullanıcı isteği, 02.10.2026)
+            'has' => Currency::firstWhere('code', 'HAS'),
         ]);
     }
 

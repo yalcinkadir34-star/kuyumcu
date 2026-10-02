@@ -423,6 +423,12 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Yedek: `storage/app/yedek/kuyumcu-2026-10-02-saat-oncesi.sql`
 - Testler: 84 test, hepsi geçiyor
 
+### ✅ v0.5.2: Cari listesi sadeleşti (02.10.2026)
+- **Kullanıcı isteği:** "Cari hesaplarda Tür, TL, Dolar, Euro kaldır, sadece müşteri ve has kısmı kalsın"
+- Cari listesi (`/cariler`) sütunları: **Müşteri** (altında küçük yazıyla kod ve telefon) ve **Has (gr)**
+- Tür filtresi kaldırıldı (durum filtresi ve arama duruyor)
+- Diğer birimler veritabanında ve cari detayında (bakiye kartları, ekstre) duruyor, sadece listeden kaldırıldı
+
 ---
 
 ## 5. Yapılacaklar
