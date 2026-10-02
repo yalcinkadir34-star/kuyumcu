@@ -480,6 +480,22 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Yapılmadı (ileride istenirse): **ramat sonucu kaydı** (eritilen ramattan çıkan has ile beklenen karşılaştırması)
 - Testler: `tests/Feature/RamatTest.php`. Toplam 85 test, hepsi geçiyor
 
+### ✅ v0.6.1: "Fişi kapat" kaldırıldı (02.10.2026)
+- **Kullanıcı:** "Fişi kapatmaya ihtiyacım yok. Müşteri sürekli ürün gönderdiği için borçlu kalıyorum,
+  hesap hiç sıfır olmuyor. Fişi nasıl kapatacağım?"
+- Fiş kapatma / tekrar açma özelliği, "Atölyede / Tamamlandı" durumu ve kapanış tarihi **tamamen kaldırıldı**
+  - Veritabanı: `work_orders.status` ve `closed_at` silindi (migration `2026_10_02_000003`). Daha önce kapatılan 2 fiş normal fiş oldu
+  - Atölye listesinde sekmeler kalktı, tüm fişler tek listede. "Kalan gr" sütunu → **"Ramat gr"**
+  - Atölye özet kartları: ramatta kalan (oran + Ramat hesabına bağlantı), ramattaki has, bu ay giriş, bu ay çıkış
+  - Fiş detayında "Atölyede kalan" → **"Ramatta kalan"**. Kalan > 0 olduğu sürece çıkış formu açık
+  - Bilançodaki "Atölyede" sütunu artık tüm fişlerin ramatını sayıyor
+- Cari bakiyeler değişmedi (önce/sonra karşılaştırıldı). Yedek: `storage/app/yedek/kuyumcu-2026-10-02-fis-kapatma-kaldirma-oncesi.sql`
+- Testler: 85 test, hepsi geçiyor
+
+### ⏳ Sıradaki: müşteri bazlı ve yıllık rapor
+- **Kullanıcı isteği (02.10.2026):** "Müşteri bazlı rapor almak istiyorum. Yıllık bazda rapor almak istiyorum.
+  Bunları müşteri talep ederse verebileyim."
+
 ### 🧪 Deneme carisi
 - **`halit` (C00005, id 6)** kullanıcının **deneme/demo** carisidir. Bu caride yapılan işlemler denemedir
 - Kullanıcı "sil" dediğinde: önce veritabanı yedeği alınır, sonra bu carinin **hareketleri, atölye fişleri (çıkışlarıyla)

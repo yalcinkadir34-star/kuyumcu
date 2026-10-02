@@ -86,8 +86,8 @@ class Balances
 
         // Atölyede işlem gören ürünlerin has karşılığı (firmalara ait, karşılığı carilerde alacak olarak duruyor)
         $hasId = DB::table('currencies')->where('code', 'HAS')->value('id');
-        // Kalan gram × ayar milyemi (işçiliksiz saf altın)
-        $inWorkshop = WorkOrder::query()->inWorkshop()->withDeliveryTotals()->get()
+        // Atölyede (ramatta) kalan: kalan gram × giriş milyemi, tüm fişler
+        $inWorkshop = WorkOrder::query()->withDeliveryTotals()->get()
             ->sum(fn (WorkOrder $order) => $order->remainingHasMilli());
 
         if ($hasId && $inWorkshop !== 0) {

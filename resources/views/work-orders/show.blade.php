@@ -17,11 +17,6 @@
             · Kaydeden: {{ $order->creator?->name ?? '—' }}
         </x-slot:subtitle>
         <x-slot:actions>
-            @if ($order->isClosed())
-                <span class="badge bg-stone-100 px-3 py-1 text-sm text-stone-600 ring-stone-300">Tamamlandı · {{ $order->closed_at->format('d.m.Y') }}</span>
-            @else
-                <span class="badge bg-amber-50 px-3 py-1 text-sm text-amber-800 ring-amber-600/20">Atölyede</span>
-            @endif
             <a href="{{ route('work-orders.edit', $order) }}" class="btn btn-secondary">Girişi Düzenle</a>
         </x-slot:actions>
     </x-page-header>
@@ -60,11 +55,9 @@
                 <dd class="mt-1 text-xl font-semibold tabular-nums">{{ Amount::formatMilli($order->deliveredMilli(), $gr) }}</dd>
                 <dd class="mt-0.5 text-xs text-stone-500">{{ Amount::formatMilli($order->deliveries->sum(fn ($d) => Amount::toMilli($d->has_out)), $gr) }} has carisine borç yazıldı</dd>
             </div>
-            <div @class(['p-5', 'bg-amber-50/60' => ! $order->isClosed(), 'bg-red-50/50' => $order->isClosed()])>
-                <dt @class(['text-xs font-medium', 'text-amber-800' => ! $order->isClosed(), 'text-red-700' => $order->isClosed()])>
-                    {{ $order->isClosed() ? 'Fire' : 'Atölyede kalan' }}
-                </dt>
-                <dd @class(['mt-1 text-xl font-semibold tabular-nums', 'text-amber-900' => ! $order->isClosed(), 'text-red-700' => $order->isClosed()])>
+            <div class="bg-amber-50/60 p-5">
+                <dt class="text-xs font-medium text-amber-800">Ramatta kalan</dt>
+                <dd class="mt-1 text-xl font-semibold tabular-nums text-amber-900">
                     {{ Amount::formatMilli($remaining, $gr) }}
                 </dd>
                 <dd class="mt-0.5 text-xs text-stone-500">
@@ -138,7 +131,7 @@
 
         {{-- Yeni çıkış formu --}}
         <div class="lg:col-span-2">
-            @if (! $order->isClosed() && $remaining > 0)
+            @if ($remaining > 0)
                 <form method="POST" action="{{ route('work-orders.deliver', $order) }}" class="card" data-deliver-form
                       data-remaining="{{ Amount::fromMilli($remaining) }}">
                     @csrf
@@ -195,27 +188,6 @@
                     <div class="flex justify-end px-5 py-4">
                         <button class="btn btn-gold">Çıkışı Kaydet ve Cariye İşle</button>
                     </div>
-                </form>
-            @endif
-
-            {{-- Kapat / tekrar aç --}}
-            @if ($order->isClosed())
-                @if (auth()->user()->isAdmin())
-                    <form method="POST" action="{{ route('work-orders.reopen', $order) }}" class="card flex items-center justify-between gap-4 p-4">
-                        @csrf
-                        @method('DELETE')
-                        <p class="text-sm text-stone-600">Fiş kapalı. Kalan miktar fire olarak raporlanıyor.</p>
-                        <button class="btn btn-secondary">Tekrar Aç</button>
-                    </form>
-                @endif
-            @else
-                <form method="POST" action="{{ route('work-orders.close', $order) }}" @class(['card flex items-center justify-between gap-4 p-4', 'mt-4' => $remaining > 0])
-                      data-confirm="Fiş kapatılsın mı? Atölyede kalan {{ Amount::formatMilli($remaining, $gr) }} fire olarak sayılacak.">
-                    @csrf
-                    <p class="text-sm text-stone-600">
-                        İş bittiyse fişi kapatın. Kalan <span class="font-medium">{{ Amount::formatMilli($remaining, $gr) }}</span> fire olarak raporlanır (cariye işlenmez).
-                    </p>
-                    <button class="btn btn-secondary">Fişi Kapat</button>
                 </form>
             @endif
         </div>

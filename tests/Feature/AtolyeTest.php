@@ -85,7 +85,6 @@ class AtolyeTest extends TestCase
 
         $this->assertSame('A00001', $order->number);
         $this->assertSame('117.000', $order->has_in);
-        $this->assertSame(WorkOrder::STATUS_ATOLYEDE, $order->status);
         $this->assertSame(-117_000, $this->hasBakiye());
     }
 
@@ -129,20 +128,18 @@ class AtolyeTest extends TestCase
         $this->assertSame('0.6250', $order->deliveries()->first()->purity_out);
     }
 
-    public function test_fis_kapatilinca_kalan_fire_sayilir_cariye_islenmez(): void
+    public function test_ramatta_kalan_cariye_islenmez_borc_olarak_durur(): void
     {
         $order = $this->giris();
         $this->cikis($order);
 
-        $this->actingAs($this->user)->post(route('work-orders.close', $order))->assertRedirect();
-        $order->refresh();
+        // 40 gr ramatta kaldı; ayrıca bir fire/kapanış kaydı yok, borç 117 − 93,6 = 23,4 olarak durur
+        $this->assertSame(40_000, $order->fresh()->remainingMilli());
+        $this->assertSame(-23_400, $this->hasBakiye());
+        $this->assertSame(2, Transaction::count());
 
-        $this->assertTrue($order->isClosed());
-        $this->assertSame(40_000, $order->remainingMilli());
-        $this->assertSame(-23_400, $this->hasBakiye()); // 117 − 93,6; cari değişmedi
-
-        $this->actingAs($this->user)->delete(route('work-orders.reopen', $order));
-        $this->assertFalse($order->fresh()->isClosed());
+        // Fiş kapatma özelliği yok
+        $this->actingAs($this->user)->get(route('work-orders.show', $order))->assertDontSee('Fişi Kapat');
     }
 
     public function test_cikis_silinince_cari_kaydi_geri_alinir(): void
@@ -252,19 +249,18 @@ class AtolyeTest extends TestCase
 
     public function test_atolye_sayfalari_acilir(): void
     {
-        $acik = $this->giris();
-        $kapali = $this->giris(['product' => 'Yüzük']);
-        $this->cikis($kapali);
-        $this->actingAs($this->user)->post(route('work-orders.close', $kapali));
+        $bilezik = $this->giris();
+        $yuzuk = $this->giris(['product' => 'Yüzük']);
+        $this->cikis($yuzuk);
 
         $this->actingAs($this->user);
 
-        $this->get(route('work-orders.index'))->assertOk()->assertSee('14 ayar bilezik')->assertDontSee('Yüzük');
-        $this->get(route('work-orders.index', ['durum' => 'tamamlandi']))->assertOk()->assertSee('Yüzük');
+        $this->get(route('work-orders.index'))->assertOk()->assertSee('14 ayar bilezik')->assertSee('Yüzük')->assertSee('Ramatta kalan');
+        $this->get(route('work-orders.index', ['q' => 'Yüzük']))->assertOk()->assertDontSee('14 ayar bilezik');
         $this->get(route('work-orders.create'))->assertOk();
-        $this->get(route('work-orders.show', $acik))->assertOk()->assertSee('Yeni Çıkış');
-        $this->get(route('work-orders.show', $kapali))->assertOk()->assertSee('40,000 gr');
-        $this->get(route('work-orders.edit', $kapali))->assertOk();
+        $this->get(route('work-orders.show', $bilezik))->assertOk()->assertSee('Yeni Çıkış');
+        $this->get(route('work-orders.show', $yuzuk))->assertOk()->assertSee('40,000 gr');
+        $this->get(route('work-orders.edit', $yuzuk))->assertOk();
     }
 
     public function test_cikistan_sonra_musteri_fisi_yazdirma_butonu_cikar(): void

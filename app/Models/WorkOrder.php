@@ -21,21 +21,16 @@ use Illuminate\Support\Facades\DB;
  * Giriş: gram × giriş milyemi has, firmanın carisine ALACAK yazılır
  *        (ör. 26,25 × 0,595 = 15,618 → firmaya has borçlanırız).
  * Çıkışlar (bir veya birden fazla): bkz. WorkOrderDelivery.
- * Giriş − çıkışlar = atölyede kalan (gram). Fire cariye işlenmez; fiş kapatılınca
- * kalan miktar fire olarak raporlanır.
+ * Giriş − çıkışlar = atölyede (ramatta) kalan gram. Fişler kapatılmaz; müşteri sürekli
+ * ürün gönderdiği için hesap hiç sıfırlanmaz. Ramat, Ramat sayfasında izlenir.
  */
 #[Fillable(['account_id', 'product', 'received_at', 'gross_in', 'purity', 'notes'])]
 class WorkOrder extends Model
 {
-    public const STATUS_ATOLYEDE = 'atolyede';
-
-    public const STATUS_TAMAMLANDI = 'tamamlandi';
-
     protected function casts(): array
     {
         return [
             'received_at' => 'datetime',
-            'closed_at' => 'date',
             'gross_in' => 'decimal:3',
             'purity' => 'decimal:4',
             'has_in' => 'decimal:3',
@@ -94,27 +89,12 @@ class WorkOrder extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function scopeInWorkshop(Builder $query): void
-    {
-        $query->where('status', self::STATUS_ATOLYEDE);
-    }
-
     /** Liste sorgularında çıkış toplamlarını tek sorguda getirir. */
     public function scopeWithDeliveryTotals(Builder $query): void
     {
         $query->withSum('deliveries as delivered_gram', 'gross_out')
             ->withSum('deliveries as delivered_has', 'has_out')
             ->withCount('deliveries');
-    }
-
-    public function isClosed(): bool
-    {
-        return $this->status === self::STATUS_TAMAMLANDI;
-    }
-
-    public function statusLabel(): string
-    {
-        return $this->isClosed() ? 'Tamamlandı' : 'Atölyede';
     }
 
     /** Toplam çıkan gram (listelerde withDeliveryTotals ile tek sorguda gelir). */
@@ -127,7 +107,7 @@ class WorkOrder extends Model
         return $this->deliveries->sum(fn (WorkOrderDelivery $d) => Amount::toMilli($d->gross_out));
     }
 
-    /** Atölyede kalan gram (giriş − çıkışlar). Fiş kapandıysa bu miktar firedir. */
+    /** Atölyede (ramatta) kalan gram: giriş − çıkışlar. */
     public function remainingMilli(): int
     {
         return Amount::toMilli($this->gross_in) - $this->deliveredMilli();
@@ -139,7 +119,7 @@ class WorkOrder extends Model
         return Workshop::hasMilli($this->remainingMilli(), $this->purity);
     }
 
-    /** Kalanın girişe oranı (%) — fiş kapandıysa fire oranı. */
+    /** Ramatta kalanın girişe oranı (%). */
     public function remainingRate(): float
     {
         return Workshop::fireRate($this->remainingMilli(), Amount::toMilli($this->gross_in));
@@ -184,16 +164,5 @@ class WorkOrder extends Model
 
             return $delivery;
         });
-    }
-
-    /** Fişi kapatır: atölyede kalan miktar fire sayılır (cariye işlenmez). */
-    public function close(): void
-    {
-        $this->forceFill(['status' => self::STATUS_TAMAMLANDI, 'closed_at' => now()->toDateString()])->save();
-    }
-
-    public function reopen(): void
-    {
-        $this->forceFill(['status' => self::STATUS_ATOLYEDE, 'closed_at' => null])->save();
     }
 }

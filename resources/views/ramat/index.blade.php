@@ -145,13 +145,6 @@
                             <tr class="cursor-pointer" onclick="window.location='{{ route('work-orders.show', $order) }}'">
                                 <td>
                                     <a href="{{ route('work-orders.show', $order) }}" class="font-mono text-xs font-medium text-stone-700 hover:text-gold-700">{{ $order->number }}</a>
-                                    <div>
-                                        @if ($order->isClosed())
-                                            <span class="badge bg-stone-100 text-stone-600 ring-stone-300">Tamamlandı</span>
-                                        @else
-                                            <span class="badge bg-amber-50 text-amber-800 ring-amber-600/20">Atölyede</span>
-                                        @endif
-                                    </div>
                                 </td>
                                 <td class="whitespace-nowrap text-stone-600">{{ $order->received_at->format('d.m.Y H:i') }}</td>
                                 <td class="max-w-56 truncate text-stone-600">{{ $order->product }}</td>
