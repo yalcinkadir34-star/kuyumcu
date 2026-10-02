@@ -552,10 +552,13 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Mevcut 3 çıkış "atolye" türünde. Yedek: `storage/app/yedek/kuyumcu-2026-10-02-cikis-turu-oncesi.sql`
 - Testler: 90 test, hepsi geçiyor
 
-### 🧪 Deneme carisi
-- **`halit` (C00005, id 6)** kullanıcının **deneme/demo** carisidir. Bu caride yapılan işlemler denemedir
-- Kullanıcı "sil" dediğinde: önce veritabanı yedeği alınır, sonra bu carinin **hareketleri, atölye girişleri, atölye çıkışları
-  ve carinin kendisi** silinir (MUSTAFA silme işlemiyle aynı yöntem, bkz. "Gerçek kullanıma geçiş")
+### 🧪 Deneme carileri
+- **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir
+- **02.10.2026: ikisi de sıfırlandı** (kullanıcı: "deneme olarak halit ve kadir hesabını kullandık, bunları sıfırla").
+  Tüm hareketleri, atölye girişleri (7) ve çıkışları (6) silindi; **cari kartları duruyor**, bakiyeleri 0.
+  Kasa hareketi yoktu. Sıfırlamadan sonra sistemde hiç atölye girişi/çıkışı kalmadı
+  - Yedek: `storage/app/yedek/kuyumcu-2026-10-02-halit-kadir-sifirlama-oncesi.sql`
+- Tekrar "sil/sıfırla" denirse: önce yedek, sonra aynı yöntem (çıkışlar → girişler → kalan hareketler, model üzerinden)
 - Diğer cariler **gerçek veridir**, dokunulmaz
 
 ### ⏳ Sıradaki: kullanıcıdan özellik detayları bekleniyor
