@@ -152,25 +152,37 @@ document.querySelectorAll('[data-quick-account]').forEach((box) => {
     );
 });
 
-// Atölye çıkış formu: has = gram × çıkış milyemi, kalacak miktar
-const deliverForm = document.querySelector('[data-deliver-form]');
+// Atölyeden çıkış formu: müşteri seçilince kalan gram ve son çıkış milyemi; has ve kalacak önizlemesi
+const deliveryForm = document.querySelector('[data-delivery-form]');
 
-if (deliverForm) {
-    const remaining = Number(deliverForm.dataset.remaining);
-    const out = deliverForm.querySelector('[data-gross-out]');
-    const purityOut = deliverForm.querySelector('[data-purity-out]');
-    const set = (selector, text) => (deliverForm.querySelector(selector).textContent = text);
+if (deliveryForm) {
+    const info = JSON.parse(deliveryForm.dataset.info || '{}');
+    const account = deliveryForm.querySelector('[data-delivery-account]');
+    const out = deliveryForm.querySelector('[data-gross-out]');
+    const purityOut = deliveryForm.querySelector('[data-purity-out]');
+    const remainingText = deliveryForm.querySelector('[data-delivery-remaining]');
+    const set = (selector, text) => (deliveryForm.querySelector(selector).textContent = text);
 
     const update = () => {
+        const selected = info[account.value];
+        const remaining = selected ? Number(selected.kalanSayi) : NaN;
         const gramOut = parseNumber(out.value);
         const total = parsePurity(purityOut.value);
 
         set('[data-preview-has]', gramOut > 0 && total > 0 ? formatNumber(hasOf(gramOut, total)) : '—');
-        set('[data-preview-remaining]', formatNumber(gramOut > 0 ? remaining - gramOut : remaining));
+        set('[data-preview-remaining]', Number.isFinite(remaining) ? formatNumber(gramOut > 0 ? remaining - gramOut : remaining) : '—');
     };
 
-    deliverForm.addEventListener('input', update);
-    update();
+    const onAccount = () => {
+        const selected = info[account.value];
+        remainingText.textContent = selected ? `Atölyede kalan ürünü: ${selected.kalan}` : '';
+        if (selected?.sonMilyem && purityOut.value === '') purityOut.value = selected.sonMilyem;
+        update();
+    };
+
+    deliveryForm.addEventListener('input', update);
+    account.addEventListener('change', onAccount);
+    onAccount();
 }
 
 // Hareket formu: seçilen türe göre cari/kasa alanlarını göster, gizle

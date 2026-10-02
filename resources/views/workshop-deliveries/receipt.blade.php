@@ -4,14 +4,14 @@
     $gr = new \App\Models\Currency(['symbol' => 'gr', 'decimals' => 3]);
     $p = fn ($value) => Workshop::formatPurity($value);
     $small = $size === '80';
-    $no = $order->number.'-'.$sequence;
+    $no = $delivery->number;
 @endphp
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Fiş {{ $no }} · {{ $order->account->name }}</title>
+    <title>Fiş {{ $no }} · {{ $delivery->account->name }}</title>
     @vite(['resources/css/app.css'])
     <style>
         @page { size: {{ $small ? '80mm auto' : 'A5' }}; margin: {{ $small ? '3mm' : '10mm' }}; }
@@ -22,7 +22,7 @@
 <body class="min-h-screen bg-stone-200 font-sans text-stone-900 antialiased print:min-h-0">
     {{-- Ekran araç çubuğu (yazdırılmaz) --}}
     <div class="sticky top-0 z-10 flex flex-wrap items-center justify-center gap-2 border-b border-stone-300 bg-white px-4 py-3 shadow-sm print:hidden">
-        <a href="{{ route('work-orders.show', $order) }}" class="btn btn-secondary">← Fişe dön</a>
+        <a href="{{ route('workshop-deliveries.index') }}" class="btn btn-secondary">← Çıkışlara dön</a>
         <div class="flex rounded-lg border border-stone-300 p-0.5 text-sm">
             <a href="{{ request()->fullUrlWithQuery(['boyut' => null]) }}"
                @class(['rounded-md px-3 py-1.5', 'bg-stone-900 text-white' => ! $small, 'text-stone-600 hover:bg-stone-100' => $small])>Normal (A5)</a>
@@ -57,8 +57,8 @@
         <dl class="mt-2 space-y-0.5">
             <div class="flex justify-between gap-2"><dt class="text-stone-500">Fiş No</dt><dd class="font-mono font-semibold">{{ $no }}</dd></div>
             <div class="flex justify-between gap-2"><dt class="text-stone-500">Tarih</dt><dd>{{ $delivery->delivered_at->format('d.m.Y H:i') }}</dd></div>
-            <div class="flex justify-between gap-2"><dt class="text-stone-500">Müşteri</dt><dd class="text-right font-semibold">{{ $order->account->name }}</dd></div>
-            <div class="flex justify-between gap-2"><dt class="text-stone-500">Ürün</dt><dd class="text-right">{{ $order->product }}</dd></div>
+            <div class="flex justify-between gap-2"><dt class="text-stone-500">Müşteri</dt><dd class="text-right font-semibold">{{ $delivery->account->name }}</dd></div>
+            @if ($delivery->product)<div class="flex justify-between gap-2"><dt class="text-stone-500">Ürün</dt><dd class="text-right">{{ $delivery->product }}</dd></div>@endif
         </dl>
 
         {{-- Çıkan ürün --}}

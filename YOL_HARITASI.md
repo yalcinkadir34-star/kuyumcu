@@ -510,9 +510,36 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Teknik: `app/Http/Controllers/ReportController.php`, `resources/views/reports/customer.blade.php`
 - Testler: `tests/Feature/RaporTest.php`. Toplam 89 test, hepsi geçiyor
 
+### ✅ v0.8: Atölye girişi ve çıkışı ayrıldı, çıkış müşteriye yapılır (02.10.2026)
+- **Kullanıcı:** "Atölye girişi için bir buton var, burada sadece giriş olacak. Atölye çıkışı için de ayrı buton olacak."
+  + "Ürünü girdiğimde direk çıkış yapmıyorum. **Hangi fişten çıktığımın önemi yok.**"
+- **Yeni yapı:** giriş ve çıkış birbirinden bağımsız
+  - **Giriş** (`work_orders`, A00001…): müşteri, ürün, gram, milyem → cari alacak (değişmedi)
+  - **Çıkış** (`work_order_deliveries`, **T00001…**): **müşteri**, ürün (isteğe bağlı), gram, çıkış milyemi, tarih, not → cari borç.
+    Giriş fişine bağlı **değil**
+  - **Ramat müşteri bazında:** müşterinin tüm girişleri − tüm çıkışları (`app/Support/WorkshopTotals.php`)
+    - Ramat has = ramat gram × müşterinin ortalama giriş milyemi (giriş has / giriş gram)
+  - Çıkış, müşterinin atölyede kalan toplam gramından fazla olamaz
+  - Giriş düzenlenir/silinirse müşterinin girişleri çıkışlarının altına düşemez
+- **Ekranlar**
+  - Atölye üst kısmı (`work-orders/_header`): **Atölyeye Giriş** ve **Atölyeden Çıkış** butonları, özet kartları, **Girişler / Çıkışlar** sekmeleri
+  - Girişler (`/atolye`): fiş, tarih, müşteri/ürün, gram, milyem, has
+  - Çıkışlar (`/atolye/cikislar`): no, tarih, müşteri/ürün, gram, milyem, has, **Fiş** (müşteri fişi) ve sil (yönetici)
+  - **Atölyeden Çıkış** (`/atolye/cikislar/yeni`): müşteri seçilince "atölyede kalan ürünü" ve son çıkış milyemi gelir; canlı has ve kalacak önizlemesi
+  - Giriş fişi detayı: giriş bilgileri + müşterinin atölye durumu (toplam giriş, çıkış, ramat, has borcu) + "Bu Müşteriye Çıkış Yap"
+  - Ramat sayfası: müşteri tablosu aynı; detayda müşterinin **giriş ve çıkışları** tarih sırasıyla ve **yürüyen ramat** ile
+  - Müşteri fişi artık çıkış numarasıyla: `/atolye/cikislar/{çıkış}/fis` (fiş no = T00001)
+  - Müşteri raporunda çıkış satırları "Teslim · ürün" ve T numarası ile
+- **Veri dönüşümü** (migration `2026_10_02_000004`): mevcut çıkışlara müşteri ve ürün, bağlı oldukları fişten verildi;
+  T00001–T00003 numaraları verildi; `work_order_id` kaldırıldı. Bakiyeler ve çıkış toplamları birebir aynı (önce/sonra kontrol)
+  - Yedek: `storage/app/yedek/kuyumcu-2026-10-02-cikis-musteriye-oncesi.sql`
+- Teknik: yeni `WorkshopDeliveryController`, `WorkshopDeliveryRequest`; `DeliverWorkOrderRequest` silindi;
+  `WorkOrder`'dan fişe bağlı çıkış/kalan metotları kaldırıldı
+- Testler: 87 test, hepsi geçiyor
+
 ### 🧪 Deneme carisi
 - **`halit` (C00005, id 6)** kullanıcının **deneme/demo** carisidir. Bu caride yapılan işlemler denemedir
-- Kullanıcı "sil" dediğinde: önce veritabanı yedeği alınır, sonra bu carinin **hareketleri, atölye fişleri (çıkışlarıyla)
+- Kullanıcı "sil" dediğinde: önce veritabanı yedeği alınır, sonra bu carinin **hareketleri, atölye girişleri, atölye çıkışları
   ve carinin kendisi** silinir (MUSTAFA silme işlemiyle aynı yöntem, bkz. "Gerçek kullanıma geçiş")
 - Diğer cariler **gerçek veridir**, dokunulmaz
 

@@ -40,7 +40,8 @@ class RaporTest extends TestCase
 
     private function cikis(WorkOrder $order, string $gram, string $milyem, string $tarih): void
     {
-        $this->actingAs($this->user)->post(route('work-orders.deliver', $order), [
+        $this->actingAs($this->user)->post(route('workshop-deliveries.store'), [
+            'account_id' => $order->account_id,
             'delivered_at' => $tarih,
             'gross_out' => $gram,
             'purity_out' => $milyem,
@@ -76,9 +77,10 @@ class RaporTest extends TestCase
             ->assertSee('Alacağınız 19,975 gr')          // dönem sonu: 5,85 + 29,75 − 15,625
             ->assertSeeInOrder(['Ocak', '50,000', '29,750', 'Şubat', 'Mart', '25,000', '15,625'])
             ->assertSee('Atölye girişi · 14 ayar zincir')
-            ->assertSee('Teslim · 14 ayar zincir')
+            ->assertSee('Teslim')
             ->assertSee('0,625')
-            ->assertSee('A00002');
+            ->assertSee('A00002')
+            ->assertSee('T00001');
     }
 
     public function test_ozel_tarih_araligi(): void

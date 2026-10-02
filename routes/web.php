@@ -9,6 +9,7 @@ use App\Http\Controllers\RamatController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WorkOrderController;
+use App\Http\Controllers\WorkshopDeliveryController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -32,16 +33,19 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/ramat', [RamatController::class, 'index'])->name('ramat.index');
     Route::get('/raporlar/musteri', [ReportController::class, 'customer'])->name('reports.customer');
 
+    // Atölye çıkışları: müşteriye, giriş fişinden bağımsız (resource rotalarından önce tanımlı olmalı)
+    Route::prefix('atolye/cikislar')->name('workshop-deliveries.')->group(function () {
+        Route::get('/', [WorkshopDeliveryController::class, 'index'])->name('index');
+        Route::get('/yeni', [WorkshopDeliveryController::class, 'create'])->name('create');
+        Route::post('/', [WorkshopDeliveryController::class, 'store'])->name('store');
+        Route::delete('/{delivery}', [WorkshopDeliveryController::class, 'destroy'])->name('destroy');
+        Route::get('/{delivery}/fis', [WorkshopDeliveryController::class, 'receipt'])->name('receipt');
+    });
+
+    // Atölye girişleri
     Route::resource('atolye', WorkOrderController::class)
         ->names('work-orders')
         ->parameters(['atolye' => 'workOrder']);
-    Route::post('/atolye/{workOrder}/cikis', [WorkOrderController::class, 'deliver'])->name('work-orders.deliver');
-    Route::delete('/atolye/{workOrder}/cikis/{delivery}', [WorkOrderController::class, 'destroyDelivery'])
-        ->scopeBindings()
-        ->name('work-orders.deliveries.destroy');
-    Route::get('/atolye/{workOrder}/cikis/{delivery}/fis', [WorkOrderController::class, 'receipt'])
-        ->scopeBindings()
-        ->name('work-orders.deliveries.receipt');
 
     Route::resource('hareketler', TransactionController::class)
         ->except('show')

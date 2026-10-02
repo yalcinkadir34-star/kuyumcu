@@ -2,20 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\DeliverWorkOrderRequest;
 use App\Http\Requests\WorkOrderRequest;
 use App\Models\Account;
 use App\Models\Currency;
 use App\Models\WorkOrder;
-use App\Models\WorkOrderDelivery;
 use App\Support\Amount;
-use App\Support\Balances;
 use App\Support\Workshop;
+use App\Support\WorkshopTotals;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
+/** Atölyeye girişler (müşterinin getirdiği ürünler). Çıkışlar: WorkshopDeliveryController. */
 class WorkOrderController extends Controller
 {
     public function index(Request $request): View
@@ -29,7 +28,6 @@ class WorkOrderController extends Controller
 
         $orders = WorkOrder::query()
             ->with('account')
-            ->withDeliveryTotals()
             ->when($filters['cari'] ?? null, fn ($q, $id) => $q->where('account_id', $id))
             ->when($filters['baslangic'] ?? null, fn ($q, $d) => $q->where('received_at', '>=', $d))
             ->when($filters['bitis'] ?? null, fn ($q, $d) => $q->where('received_at', '<', Carbon::parse($d)->addDay()->toDateString()))
@@ -46,7 +44,7 @@ class WorkOrderController extends Controller
         return view('work-orders.index', [
             'orders' => $orders,
             'accounts' => Account::query()->whereHas('workOrders')->orderBy('name')->get(['id', 'name']),
-            'summary' => $this->summary(),
+            'summary' => self::summary(),
         ]);
     }
 
@@ -67,7 +65,7 @@ class WorkOrderController extends Controller
         $order->saveWithTransactions($request->user());
 
         $message = "{$order->number} atölyeye alındı: {$order->product}. "
-            .'Firmanın carisine '.Amount::format($order->has_in, Currency::firstWhere('code', 'HAS')).' has alacak yazıldı.';
+            .'Müşterinin carisine '.Amount::format($order->has_in, Currency::firstWhere('code', 'HAS')).' has alacak yazıldı.';
 
         if ($request->boolean('yeni')) {
             return redirect()->route('work-orders.create', ['cari' => $order->account_id])->with('success', $message);
@@ -78,18 +76,11 @@ class WorkOrderController extends Controller
 
     public function show(WorkOrder $workOrder): View
     {
-        $workOrder->load(['account', 'creator', 'deliveries']);
-
-        // Çıkış milyemi varsayılanı: bu fişin ya da firmanın son çıkışındaki milyem
-        $lastPurityOut = $workOrder->deliveries->last()?->purity_out
-            ?? WorkOrderDelivery::query()
-                ->whereHas('workOrder', fn ($q) => $q->where('account_id', $workOrder->account_id))
-                ->latest('id')
-                ->value('purity_out');
+        $workOrder->load(['account', 'creator']);
 
         return view('work-orders.show', [
             'order' => $workOrder,
-            'defaultPurityOut' => $lastPurityOut,
+            'totals' => WorkshopTotals::forAccount($workOrder->account_id),
         ]);
     }
 
@@ -102,80 +93,45 @@ class WorkOrderController extends Controller
     {
         $data = $request->orderData();
 
-        if (Amount::toMilli($data['gross_in']) < $workOrder->deliveredMilli()) {
-            return back()->withInput()->withErrors(['gross_in' => 'Giriş gramı, yapılmış çıkışların toplamından az olamaz.']);
+        if ($error = $this->checkRamatAfterChange($workOrder, (int) $data['account_id'], Amount::toMilli($data['gross_in']))) {
+            return back()->withInput()->withErrors(['gross_in' => $error]);
         }
 
         $workOrder->fill($data);
         $workOrder->saveWithTransactions($request->user());
 
         return redirect()->route('work-orders.show', $workOrder)
-            ->with('success', 'Giriş bilgileri güncellendi, cari has kayıtları yeniden hesaplandı.');
-    }
-
-    /** Yeni çıkış (parçalı teslim). */
-    public function deliver(DeliverWorkOrderRequest $request, WorkOrder $workOrder): RedirectResponse
-    {
-        $delivery = $workOrder->addDelivery($request->deliveryData(), $request->user());
-        $gr = new Currency(['symbol' => 'gr', 'decimals' => 3]);
-
-        $message = 'Çıkış kaydedildi: '.Amount::format($delivery->gross_out, $gr)
-            .' × '.Workshop::formatPurity($delivery->purity_out)
-            .' = '.Amount::format($delivery->has_out, $gr).' has cariye borç yazıldı';
-
-        $workOrder->unsetRelation('deliveries');
-        $message .= '. Atölyede kalan: '.Amount::formatMilli($workOrder->remainingMilli(), $gr).'.';
-
-        return redirect()->route('work-orders.show', $workOrder)
-            ->with('success', $message)
-            ->with('receipt_delivery_id', $delivery->id);
-    }
-
-    /** Müşteriye verilen bilgi fişi (yazdırılabilir). ?boyut=80 → 80 mm fiş yazıcısı */
-    public function receipt(Request $request, WorkOrder $workOrder, WorkOrderDelivery $delivery): View
-    {
-        $workOrder->load(['account', 'deliveries']);
-
-        // Bu çıkışın fişteki sırası
-        $sequence = $workOrder->deliveries->takeUntil(fn ($d) => $d->id === $delivery->id)->count() + 1;
-
-        // Müşterinin bu çıkıştan hemen sonraki bakiyesi (fiş sonradan yazdırılsa da değişmez)
-        $balances = $delivery->out_transaction_id
-            ? Balances::forAccountUntil($workOrder->account_id, $delivery->delivered_at->format('Y-m-d H:i:s'), $delivery->out_transaction_id)
-            : $workOrder->account->balances();
-
-        return view('work-orders.receipt', [
-            'order' => $workOrder,
-            'delivery' => $delivery,
-            'sequence' => $sequence,
-            'balances' => $balances,
-            'currencies' => Currency::query()->orderBy('sort')->get()->keyBy('id'),
-            'size' => $request->query('boyut') === '80' ? '80' : 'a5',
-            'firma' => config('kuyumcu.firma'),
-        ]);
-    }
-
-    public function destroyDelivery(Request $request, WorkOrder $workOrder, WorkOrderDelivery $delivery): RedirectResponse
-    {
-        abort_unless($request->user()->isAdmin(), 403);
-
-        $delivery->delete();
-
-        return redirect()->route('work-orders.show', $workOrder)
-            ->with('success', 'Çıkış silindi, cari kaydı geri alındı.');
+            ->with('success', 'Giriş bilgileri güncellendi, cari has kaydı yeniden hesaplandı.');
     }
 
     public function destroy(Request $request, WorkOrder $workOrder): RedirectResponse
     {
         abort_unless($request->user()->isAdmin(), 403);
 
-        if ($workOrder->deliveries()->exists()) {
-            return back()->with('error', 'Çıkışı olan fiş silinemez. Önce çıkışları silin.');
+        if ($error = $this->checkRamatAfterChange($workOrder, $workOrder->account_id, 0)) {
+            return back()->with('error', $error);
         }
 
         $workOrder->delete();
 
         return redirect()->route('work-orders.index')->with('success', "{$workOrder->number} silindi.");
+    }
+
+    /**
+     * Giriş değiştirilir/silinirse müşterinin girişleri çıkışlarının altına düşmemeli
+     * (atölyeden, müşterinin getirdiğinden fazlası çıkmış olamaz).
+     */
+    private function checkRamatAfterChange(WorkOrder $order, int $newAccountId, int $newGramMilli): ?string
+    {
+        $oldGram = Amount::toMilli($order->gross_in);
+
+        // Eski müşteriden bu giriş düşülür; müşteri değişmiyorsa yeni gram eklenir
+        $ramat = WorkshopTotals::forAccount($order->account_id)['ramat_gram'] - $oldGram
+            + ($newAccountId === $order->account_id ? $newGramMilli : 0);
+
+        return $ramat < 0
+            ? 'Bu değişiklikle müşterinin girişleri, yapılmış çıkışlarının altına düşer. Önce çıkışları kontrol edin.'
+            : null;
     }
 
     private function formData(WorkOrder $order): array
@@ -186,7 +142,7 @@ class WorkOrderController extends Controller
                 ->where(fn ($q) => $q->where('is_active', true)->orWhere('id', $order->account_id))
                 ->orderBy('name')
                 ->get(['id', 'code', 'name']),
-            // Her firmanın son kullandığı milyem, formda öneri olarak gösterilir
+            // Her müşterinin son giriş milyemi, formda öneri olarak gösterilir
             'lastPurities' => WorkOrder::query()
                 ->whereIn('id', WorkOrder::query()->selectRaw('MAX(id)')->groupBy('account_id'))
                 ->get(['account_id', 'purity'])
@@ -194,35 +150,26 @@ class WorkOrderController extends Controller
         ];
     }
 
-    /** Özet kartları: ramatta kalan, bu ayın girişleri ve çıkışları. */
-    private function summary(): array
+    /** Atölye özet kartları (giriş ve çıkış sayfalarında ortak). */
+    public static function summary(): array
     {
-        $all = WorkOrder::query()->withDeliveryTotals()->get();
-        $ramat = $all->sum(fn (WorkOrder $o) => $o->remainingMilli());
-
-        $monthStart = now()->startOfMonth()->format('Y-m-d H:i:s');
-        $monthEnd = now()->endOfMonth()->format('Y-m-d H:i:s');
-
-        $monthIn = WorkOrder::query()
-            ->whereBetween('received_at', [$monthStart, $monthEnd])
-            ->selectRaw('COUNT(*) as adet, COALESCE(SUM(gross_in), 0) as gram, COALESCE(SUM(has_in), 0) as has')
-            ->toBase()->first();
-
-        $monthOut = WorkOrderDelivery::query()
-            ->whereBetween('delivered_at', [$monthStart, $monthEnd])
-            ->selectRaw('COUNT(*) as adet, COALESCE(SUM(gross_out), 0) as gram, COALESCE(SUM(has_out), 0) as has')
-            ->toBase()->first();
+        $total = WorkshopTotals::sum(WorkshopTotals::forAccounts());
+        $month = WorkshopTotals::sum(WorkshopTotals::forAccounts(
+            null,
+            now()->startOfMonth()->toDateString(),
+            now()->endOfMonth()->toDateString(),
+        ));
 
         return [
-            'ramat_gram' => $ramat,
-            'ramat_has' => $all->sum(fn (WorkOrder $o) => $o->remainingHasMilli()),
-            'ramat_orani' => Workshop::fireRate($ramat, $all->sum(fn (WorkOrder $o) => Amount::toMilli($o->gross_in))),
-            'ay_giris_adet' => (int) $monthIn->adet,
-            'ay_giris_gram' => Amount::toMilli($monthIn->gram),
-            'ay_giris_has' => Amount::toMilli($monthIn->has),
-            'ay_cikis_adet' => (int) $monthOut->adet,
-            'ay_cikis_gram' => Amount::toMilli($monthOut->gram),
-            'ay_cikis_has' => Amount::toMilli($monthOut->has),
+            'ramat_gram' => $total['ramat_gram'],
+            'ramat_has' => $total['ramat_has'],
+            'ramat_orani' => $total['oran'],
+            'ay_giris_adet' => $month['giris_adet'],
+            'ay_giris_gram' => $month['giris_gram'],
+            'ay_giris_has' => $month['giris_has'],
+            'ay_cikis_adet' => $month['cikis_adet'],
+            'ay_cikis_gram' => $month['cikis_gram'],
+            'ay_cikis_has' => $month['cikis_has'],
         ];
     }
 }

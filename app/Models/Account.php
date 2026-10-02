@@ -49,6 +49,11 @@ class Account extends Model
         return $this->hasMany(WorkOrder::class);
     }
 
+    public function workshopDeliveries(): HasMany
+    {
+        return $this->hasMany(WorkOrderDelivery::class);
+    }
+
     public function scopeSearch(Builder $query, ?string $term): void
     {
         if (blank($term)) {

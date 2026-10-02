@@ -9,6 +9,7 @@ use App\Models\CashRegister;
 use App\Models\Currency;
 use App\Models\Transaction;
 use App\Models\WorkOrder;
+use App\Models\WorkOrderDelivery;
 use App\Support\Amount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -128,15 +129,20 @@ class TransactionController extends Controller
         return redirect($back)->with('success', 'Hareket silindi.');
     }
 
-    /** Atölye fişinden oluşan kayıtlar sadece fiş üzerinden değiştirilebilir. */
+    /** Atölye giriş/çıkışından oluşan kayıtlar sadece atölye ekranından değiştirilebilir. */
     private function redirectIfLinked(Transaction $transaction): ?RedirectResponse
     {
-        $order = WorkOrder::linkedTo($transaction);
+        if ($order = WorkOrder::firstWhere('in_transaction_id', $transaction->id)) {
+            return redirect()->route('work-orders.show', $order)
+                ->with('error', "Bu kayıt {$order->number} atölye girişinden otomatik oluşturuldu. Değişikliği giriş fişi üzerinden yapın.");
+        }
 
-        return $order
-            ? redirect()->route('work-orders.show', $order)
-                ->with('error', "Bu kayıt {$order->number} atölye fişinden otomatik oluşturuldu. Değişikliği fiş üzerinden yapın.")
-            : null;
+        if ($delivery = WorkOrderDelivery::firstWhere('out_transaction_id', $transaction->id)) {
+            return redirect()->route('workshop-deliveries.index', ['q' => $delivery->number])
+                ->with('error', "Bu kayıt {$delivery->number} atölye çıkışından otomatik oluşturuldu. Değiştirmek için çıkışı silip yeniden girin.");
+        }
+
+        return null;
     }
 
     private function formData(Transaction $transaction): array

@@ -85,7 +85,7 @@ class ReportController extends Controller
     {
         $ids = $rows->pluck('id');
         $entries = WorkOrder::query()->whereIn('in_transaction_id', $ids)->get()->keyBy('in_transaction_id');
-        $exits = WorkOrderDelivery::query()->with('workOrder')->whereIn('out_transaction_id', $ids)->get()->keyBy('out_transaction_id');
+        $exits = WorkOrderDelivery::query()->whereIn('out_transaction_id', $ids)->get()->keyBy('out_transaction_id');
 
         return $rows->map(function (Transaction $row) use ($entries, $exits) {
             // Yön: -1 = müşteri bize has verdi (giriş), +1 = müşteriye has verildi (çıkış)
@@ -102,8 +102,8 @@ class ReportController extends Controller
             } elseif ($delivery = $exits->get($row->id)) {
                 $row->gram_milli = Amount::toMilli($delivery->gross_out);
                 $row->purity = $delivery->purity_out;
-                $row->label = 'Teslim · '.$delivery->workOrder->product;
-                $row->document_no = $delivery->workOrder->number;
+                $row->label = 'Teslim'.($delivery->product ? ' · '.$delivery->product : '');
+                $row->document_no = $delivery->number;
             }
 
             return $row;

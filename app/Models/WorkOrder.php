@@ -7,22 +7,18 @@ use App\Support\Amount;
 use App\Support\LinkedTransaction;
 use App\Support\Workshop;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Atölye iş emri (fason işçilik fişi).
+ * Atölyeye giriş fişi: müşterinin getirdiği ürün.
  *
  * purity: giriş milyemi, işçilik dahil olarak doğrudan girilir (ör. 0,595).
+ * Has = gram × milyem, müşterinin carisine ALACAK yazılır (müşteriye has borçlanırız).
  *
- * Giriş: gram × giriş milyemi has, firmanın carisine ALACAK yazılır
- *        (ör. 26,25 × 0,595 = 15,618 → firmaya has borçlanırız).
- * Çıkışlar (bir veya birden fazla): bkz. WorkOrderDelivery.
- * Giriş − çıkışlar = atölyede (ramatta) kalan gram. Fişler kapatılmaz; müşteri sürekli
- * ürün gönderdiği için hesap hiç sıfırlanmaz. Ramat, Ramat sayfasında izlenir.
+ * Çıkışlar bir girişe bağlı değildir, doğrudan müşteriye yapılır (bkz. WorkOrderDelivery).
+ * Ramat müşteri bazında hesaplanır: tüm girişler − tüm çıkışlar (bkz. WorkshopTotals).
  */
 #[Fillable(['account_id', 'product', 'received_at', 'gross_in', 'purity', 'notes'])]
 class WorkOrder extends Model
@@ -47,11 +43,7 @@ class WorkOrder extends Model
             $order->has_in = Amount::fromMilli(Workshop::hasMilli(Amount::toMilli($order->gross_in), $order->purity));
         });
 
-        // Fiş silinince giriş kaydı ve çıkışlar (kendi cari kayıtlarıyla) silinir
-        static::deleting(function (WorkOrder $order) {
-            $order->deliveries->each->delete();
-        });
-
+        // Fiş silinince cariye işlenmiş giriş kaydı da silinir
         static::deleted(function (WorkOrder $order) {
             Transaction::whereKey($order->in_transaction_id)->delete();
         });
@@ -66,22 +58,9 @@ class WorkOrder extends Model
         return 'A'.str_pad((string) $number, 5, '0', STR_PAD_LEFT);
     }
 
-    /** Bu cari hareketi bir atölye fişinden otomatik oluşturulduysa o fiş. */
-    public static function linkedTo(Transaction $transaction): ?self
-    {
-        $delivery = WorkOrderDelivery::firstWhere('out_transaction_id', $transaction->id);
-
-        return $delivery?->workOrder ?? static::firstWhere('in_transaction_id', $transaction->id);
-    }
-
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
-    }
-
-    public function deliveries(): HasMany
-    {
-        return $this->hasMany(WorkOrderDelivery::class)->orderBy('delivered_at')->orderBy('id');
     }
 
     public function creator(): BelongsTo
@@ -89,43 +68,7 @@ class WorkOrder extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /** Liste sorgularında çıkış toplamlarını tek sorguda getirir. */
-    public function scopeWithDeliveryTotals(Builder $query): void
-    {
-        $query->withSum('deliveries as delivered_gram', 'gross_out')
-            ->withSum('deliveries as delivered_has', 'has_out')
-            ->withCount('deliveries');
-    }
-
-    /** Toplam çıkan gram (listelerde withDeliveryTotals ile tek sorguda gelir). */
-    public function deliveredMilli(): int
-    {
-        if (array_key_exists('delivered_gram', $this->attributes)) {
-            return Amount::toMilli($this->attributes['delivered_gram'] ?? 0);
-        }
-
-        return $this->deliveries->sum(fn (WorkOrderDelivery $d) => Amount::toMilli($d->gross_out));
-    }
-
-    /** Atölyede (ramatta) kalan gram: giriş − çıkışlar. */
-    public function remainingMilli(): int
-    {
-        return Amount::toMilli($this->gross_in) - $this->deliveredMilli();
-    }
-
-    /** Atölyede kalan gramın has karşılığı (giriş milyemiyle). */
-    public function remainingHasMilli(): int
-    {
-        return Workshop::hasMilli($this->remainingMilli(), $this->purity);
-    }
-
-    /** Ramatta kalanın girişe oranı (%). */
-    public function remainingRate(): float
-    {
-        return Workshop::fireRate($this->remainingMilli(), Amount::toMilli($this->gross_in));
-    }
-
-    /** Giriş bilgilerini kaydeder, giriş ve çıkış cari kayıtlarını günceller. */
+    /** Fişi kaydeder ve giriş has'ını müşterinin carisine alacak olarak işler. */
     public function saveWithTransactions(?User $user = null): void
     {
         DB::transaction(function () use ($user) {
@@ -145,24 +88,6 @@ class WorkOrder extends Model
                 $user?->id ?? $this->created_by,
             );
             $this->saveQuietly();
-
-            // Milyem veya firma değişmiş olabilir: çıkışları yeniden hesapla
-            foreach ($this->deliveries()->get() as $delivery) {
-                $delivery->setRelation('workOrder', $this);
-                $delivery->saveWithTransactions($user?->id ?? $delivery->created_by);
-            }
-        });
-    }
-
-    /** Yeni çıkış (teslim) ekler ve cariye işler. */
-    public function addDelivery(array $data, User $user): WorkOrderDelivery
-    {
-        return DB::transaction(function () use ($data, $user) {
-            $delivery = $this->deliveries()->make($data);
-            $delivery->setRelation('workOrder', $this);
-            $delivery->saveWithTransactions($user->id);
-
-            return $delivery;
         });
     }
 }

@@ -9,15 +9,16 @@ use App\Support\Workshop;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 /**
- * Atölye fişinden yapılan bir çıkış (teslim). Bir fişin birden fazla çıkışı olabilir.
+ * Atölyeden müşteriye çıkış (teslim). Bir giriş fişine bağlı değildir: müşteri ürünlerini getirir,
+ * atölye başka bir zaman, istediği kadarını çıkar ("hangi fişten çıktığımın önemi yok").
  *
- * purity_out: çıkış milyemi, işçilik dahil olarak doğrudan girilir (ör. 0,625).
- * Çıkış has = gram × çıkış milyemi, ör. 6,97 × 0,625 = 4,356.
- * Bu has firmanın carisine BORÇ yazılır (firmaya has borcumuz düşer).
+ * purity_out: çıkış milyemi, işçilik dahil (ör. 0,625). Has = gram × çıkış milyemi.
+ * Bu has müşterinin carisine BORÇ yazılır (müşteriye has borcumuz düşer).
  */
-#[Fillable(['delivered_at', 'gross_out', 'purity_out', 'notes'])]
+#[Fillable(['account_id', 'product', 'delivered_at', 'gross_out', 'purity_out', 'notes'])]
 class WorkOrderDelivery extends Model
 {
     protected function casts(): array
@@ -32,39 +33,60 @@ class WorkOrderDelivery extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (WorkOrderDelivery $delivery) {
+            $delivery->number ??= static::nextNumber();
+        });
+
         static::deleted(function (WorkOrderDelivery $delivery) {
             Transaction::whereKey($delivery->out_transaction_id)->delete();
         });
     }
 
-    public function workOrder(): BelongsTo
+    /** Sıradaki çıkış numarası: T00001, T00002, ... */
+    public static function nextNumber(): string
     {
-        return $this->belongsTo(WorkOrder::class);
+        $last = static::query()->where('number', 'like', 'T%')->orderByDesc('number')->value('number');
+        $number = $last ? (int) substr($last, 1) + 1 : 1;
+
+        return 'T'.str_pad((string) $number, 5, '0', STR_PAD_LEFT);
     }
 
-    /** Has'ı hesaplar, cari kaydını eşitler ve kaydeder. */
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(Account::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** Has'ı hesaplar, kaydeder ve müşterinin carisine borç olarak işler. */
     public function saveWithTransactions(?int $userId = null): void
     {
-        $order = $this->workOrder;
-        $hasOut = Workshop::hasMilli(Amount::toMilli($this->gross_out), $this->purity_out);
+        DB::transaction(function () use ($userId) {
+            $hasOut = Workshop::hasMilli(Amount::toMilli($this->gross_out), $this->purity_out);
 
-        $this->has_out = Amount::fromMilli($hasOut);
-        $this->created_by ??= $userId;
+            $this->has_out = Amount::fromMilli($hasOut);
+            $this->created_by ??= $userId;
+            $this->save(); // numara oluşsun
 
-        $grams = Amount::format($this->gross_out, new Currency(['symbol' => 'gr', 'decimals' => 3]));
+            $grams = Amount::format($this->gross_out, new Currency(['symbol' => 'gr', 'decimals' => 3]));
+            $what = $this->product ? "{$this->product} " : '';
 
-        $this->out_transaction_id = LinkedTransaction::sync(
-            $this->out_transaction_id,
-            TransactionType::CariBorc,
-            $hasOut,
-            Currency::firstWhere('code', 'HAS'),
-            $this->delivered_at,
-            $order->account_id,
-            $order->number,
-            "Atölye çıkışı: {$order->product} ({$grams} × ".Workshop::formatPurity($this->purity_out).')',
-            $userId,
-        );
+            $this->out_transaction_id = LinkedTransaction::sync(
+                $this->out_transaction_id,
+                TransactionType::CariBorc,
+                $hasOut,
+                Currency::firstWhere('code', 'HAS'),
+                $this->delivered_at,
+                $this->account_id,
+                $this->number,
+                "Atölye çıkışı: {$what}({$grams} × ".Workshop::formatPurity($this->purity_out).')',
+                $userId,
+            );
 
-        $this->save();
+            $this->saveQuietly();
+        });
     }
 }

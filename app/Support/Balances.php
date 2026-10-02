@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Models\WorkOrder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -86,9 +85,8 @@ class Balances
 
         // Atölyede işlem gören ürünlerin has karşılığı (firmalara ait, karşılığı carilerde alacak olarak duruyor)
         $hasId = DB::table('currencies')->where('code', 'HAS')->value('id');
-        // Atölyede (ramatta) kalan: kalan gram × giriş milyemi, tüm fişler
-        $inWorkshop = WorkOrder::query()->withDeliveryTotals()->get()
-            ->sum(fn (WorkOrder $order) => $order->remainingHasMilli());
+        // Atölyede (ramatta) kalan has: müşteri bazında (girişler − çıkışlar) × ortalama giriş milyemi
+        $inWorkshop = WorkshopTotals::sum(WorkshopTotals::forAccounts())['ramat_has'];
 
         if ($hasId && $inWorkshop !== 0) {
             $result[$hasId] = [...$empty, 'atolye' => $inWorkshop];

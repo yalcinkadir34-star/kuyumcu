@@ -47,8 +47,8 @@
             <div class="mt-1 text-xs text-stone-500">Giriş has − çıkış has</div>
         </div>
         <div class="card p-5">
-            <div class="text-sm font-medium text-stone-500">Fiş / Müşteri</div>
-            <div class="mt-2 text-2xl font-semibold tabular-nums">{{ $total['fis'] }} / {{ $customers->count() }}</div>
+            <div class="text-sm font-medium text-stone-500">Giriş fişi / Müşteri</div>
+            <div class="mt-2 text-2xl font-semibold tabular-nums">{{ $total['giris_adet'] }} / {{ $customers->count() }}</div>
             <div class="mt-1 text-xs text-stone-500">
                 @if (request()->hasAny(['baslangic', 'bitis']))
                     Seçili tarih aralığında giren fişler
@@ -70,7 +70,7 @@
                 <thead>
                     <tr>
                         <th>Müşteri</th>
-                        <th class="text-right">Fiş</th>
+                        <th class="text-right">Giriş</th>
                         <th class="text-right">Giren gr</th>
                         <th class="text-right">Çıkan gr</th>
                         <th class="text-right">Ramat gr</th>
@@ -86,7 +86,7 @@
                             <td>
                                 <a href="{{ route('ramat.index', $dateQuery + ['cari' => $row['account']->id]) }}" class="font-medium text-stone-900 hover:text-gold-700">{{ $row['account']->name }}</a>
                             </td>
-                            <td class="text-right tabular-nums text-stone-600">{{ $row['fis'] }}</td>
+                            <td class="text-right tabular-nums text-stone-600">{{ $row['giris_adet'] }}</td>
                             <td class="text-right tabular-nums">{{ $f($row['giris_gram']) }}</td>
                             <td class="text-right tabular-nums">{{ $f($row['cikis_gram']) }}</td>
                             <td class="text-right tabular-nums whitespace-nowrap">
@@ -106,7 +106,7 @@
                     <tfoot>
                         <tr class="bg-stone-50 font-semibold">
                             <td class="px-4 py-2.5">Toplam</td>
-                            <td class="px-4 py-2.5 text-right tabular-nums">{{ $total['fis'] }}</td>
+                            <td class="px-4 py-2.5 text-right tabular-nums">{{ $total['giris_adet'] }}</td>
                             <td class="px-4 py-2.5 text-right tabular-nums">{{ $f($total['giris_gram']) }}</td>
                             <td class="px-4 py-2.5 text-right tabular-nums">{{ $f($total['cikis_gram']) }}</td>
                             <td class="px-4 py-2.5 text-right tabular-nums text-amber-800">{{ $f($total['ramat_gram']) }}</td>
@@ -119,52 +119,57 @@
         </div>
     </div>
 
-    {{-- Seçili müşterinin fişleri --}}
+    {{-- Seçili müşterinin giriş ve çıkışları --}}
     @if ($selected)
+        @php $running = 0; @endphp
         <div class="card mt-6 overflow-hidden">
             <div class="card-header">
-                <h3 class="font-semibold text-stone-900">{{ $selected->name }} · fiş bazında ramat</h3>
+                <h3 class="font-semibold text-stone-900">{{ $selected->name }} · giriş ve çıkışlar</h3>
                 <a href="{{ route('ramat.index', $dateQuery) }}" class="text-sm text-stone-500 hover:text-stone-800">Kapat ✕</a>
             </div>
             <div class="overflow-x-auto">
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>Fiş</th>
-                            <th>Giriş</th>
+                            <th>Tarih</th>
+                            <th>İşlem</th>
                             <th>Ürün</th>
-                            <th class="text-right">Giren gr</th>
+                            <th class="text-right">Gram</th>
                             <th class="text-right">Milyem</th>
-                            <th class="text-right">Çıkan gr</th>
+                            <th class="text-right">Has</th>
                             <th class="text-right">Ramat gr</th>
-                            <th class="text-right">Ramat has</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($selectedOrders as $order)
-                            <tr class="cursor-pointer" onclick="window.location='{{ route('work-orders.show', $order) }}'">
-                                <td>
-                                    <a href="{{ route('work-orders.show', $order) }}" class="font-mono text-xs font-medium text-stone-700 hover:text-gold-700">{{ $order->number }}</a>
+                        @forelse ($movements as $m)
+                            @php $running += ($m->type === 'giris' ? 1 : -1) * Amount::toMilli($m->gram); @endphp
+                            <tr class="cursor-pointer" onclick="window.location='{{ $m->url }}'">
+                                <td class="whitespace-nowrap text-stone-600">{{ $m->date->format('d.m.Y H:i') }}</td>
+                                <td class="whitespace-nowrap">
+                                    @if ($m->type === 'giris')
+                                        <span class="badge bg-sky-50 text-sky-700 ring-sky-600/20">Giriş</span>
+                                    @else
+                                        <span class="badge bg-emerald-50 text-emerald-700 ring-emerald-600/20">Çıkış</span>
+                                    @endif
+                                    <span class="ml-1 font-mono text-xs text-stone-500">{{ $m->number }}</span>
                                 </td>
-                                <td class="whitespace-nowrap text-stone-600">{{ $order->received_at->format('d.m.Y H:i') }}</td>
-                                <td class="max-w-56 truncate text-stone-600">{{ $order->product }}</td>
-                                <td class="text-right tabular-nums">{{ Amount::format($order->gross_in, $gr, false) }}</td>
-                                <td class="text-right tabular-nums text-stone-600">{{ Workshop::formatPurity($order->purity) }}</td>
-                                <td class="text-right tabular-nums">{{ $f($order->deliveredMilli()) }}</td>
-                                <td class="text-right tabular-nums whitespace-nowrap">
-                                    <span class="font-semibold text-amber-800">{{ $f($order->remainingMilli()) }}</span>
-                                    <div class="text-xs text-stone-500">{{ $rate($order->remainingRate()) }}</div>
-                                </td>
-                                <td class="text-right font-medium tabular-nums text-gold-800">{{ $f($order->remainingHasMilli()) }}</td>
+                                <td class="max-w-56 truncate text-stone-600">{{ $m->product ?: '—' }}</td>
+                                <td class="text-right tabular-nums">{{ ($m->type === 'giris' ? '+' : '−').Amount::format($m->gram, $gr, false) }}</td>
+                                <td class="text-right tabular-nums text-stone-600">{{ Workshop::formatPurity($m->purity) }}</td>
+                                <td class="text-right tabular-nums text-gold-800">{{ Amount::format($m->has, $gr, false) }}</td>
+                                <td class="text-right font-semibold tabular-nums text-amber-800">{{ $f($running) }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="py-10 text-center text-stone-500">Bu aralıkta fiş yok.</td>
+                                <td colspan="7" class="py-10 text-center text-stone-500">Bu aralıkta hareket yok.</td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
+            @if (request()->hasAny(['baslangic', 'bitis']))
+                <p class="border-t border-stone-100 px-5 py-2 text-xs text-stone-500">Ramat sütunu sadece seçili tarih aralığındaki hareketlerden hesaplanır.</p>
+            @endif
         </div>
     @endif
 @endsection

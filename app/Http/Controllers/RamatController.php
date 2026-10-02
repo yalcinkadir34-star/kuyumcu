@@ -4,19 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\WorkOrder;
-use App\Support\Amount;
-use App\Support\Workshop;
+use App\Models\WorkOrderDelivery;
+use App\Support\WorkshopTotals;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 /**
- * Ramat hesabı: atölyeye gelen ürünlerden müşteriye geri çıkmayan, atölyede (ramatta)
- * kalan altının müşteri bazında dökümü. Müşteriyle hesap kapatılmaz; ramat burada izlenir.
+ * Ramat hesabı: müşterinin atölyeye getirip geri almadığı, atölyede (ramatta) kalan altın.
+ * Müşteriyle hesap kapatılmaz; ramat burada izlenir.
  *
- *   Ramat gram  = giriş gramı − çıkış gramları
- *   Ramat has   = ramat gram × giriş milyemi
- *   Has borcu   = giriş has − çıkış has (müşterinin carisinde biriken borcumuz)
+ *   Ramat gram = müşterinin giriş gramları − çıkış gramları
+ *   Ramat has  = ramat gram × müşterinin ortalama giriş milyemi
+ *   Has borcu  = giriş has − çıkış has (müşterinin carisinde biriken borcumuz)
  */
 class RamatController extends Controller
 {
@@ -27,18 +27,14 @@ class RamatController extends Controller
             'bitis' => ['nullable', 'date'],
             'cari' => ['nullable', 'integer'],
         ]);
+        $from = $filters['baslangic'] ?? null;
+        $to = $filters['bitis'] ?? null;
 
-        $orders = WorkOrder::query()
-            ->with('account')
-            ->withDeliveryTotals()
-            ->when($filters['baslangic'] ?? null, fn ($q, $d) => $q->where('received_at', '>=', $d))
-            ->when($filters['bitis'] ?? null, fn ($q, $d) => $q->where('received_at', '<', Carbon::parse($d)->addDay()->toDateString()))
-            ->orderBy('received_at')
-            ->orderBy('id')
-            ->get();
+        $totals = WorkshopTotals::forAccounts(null, $from, $to);
+        $accounts = Account::query()->whereIn('id', array_keys($totals))->get()->keyBy('id');
 
-        $customers = $orders->groupBy('account_id')
-            ->map(fn ($group) => $this->totals($group) + ['account' => $group->first()->account])
+        $customers = collect($totals)
+            ->map(fn (array $row, int $id) => $row + ['account' => $accounts[$id]])
             ->sortByDesc('ramat_gram')
             ->values();
 
@@ -46,27 +42,37 @@ class RamatController extends Controller
 
         return view('ramat.index', [
             'customers' => $customers,
-            'total' => $this->totals($orders),
+            'total' => WorkshopTotals::sum($totals),
             'selected' => $selected,
-            'selectedOrders' => $selected ? $orders->where('account_id', $selected->id)->values() : collect(),
+            'movements' => $selected ? $this->movements($selected, $from, $to) : collect(),
         ]);
     }
 
-    /** Bir grup fişin giriş, çıkış ve ramat toplamları (binde bir birimli tam sayılar). */
-    private function totals($orders): array
+    /** Seçili müşterinin giriş ve çıkışları, tarih sırasıyla, yürüyen ramat ile. */
+    private function movements(Account $account, ?string $from, ?string $to)
     {
-        $girisGram = $orders->sum(fn (WorkOrder $o) => Amount::toMilli($o->gross_in));
-        $ramatGram = $orders->sum(fn (WorkOrder $o) => $o->remainingMilli());
+        $until = $to ? Carbon::parse($to)->addDay()->toDateString() : null;
 
-        return [
-            'fis' => $orders->count(),
-            'giris_gram' => $girisGram,
-            'giris_has' => $orders->sum(fn (WorkOrder $o) => Amount::toMilli($o->has_in)),
-            'cikis_gram' => $orders->sum(fn (WorkOrder $o) => $o->deliveredMilli()),
-            'cikis_has' => $orders->sum(fn (WorkOrder $o) => Amount::toMilli($o->delivered_has ?? 0)),
-            'ramat_gram' => $ramatGram,
-            'ramat_has' => $orders->sum(fn (WorkOrder $o) => $o->remainingHasMilli()),
-            'oran' => Workshop::fireRate($ramatGram, $girisGram),
-        ];
+        $in = WorkOrder::query()->where('account_id', $account->id)
+            ->when($from, fn ($q) => $q->where('received_at', '>=', $from))
+            ->when($until, fn ($q) => $q->where('received_at', '<', $until))
+            ->get()
+            ->map(fn (WorkOrder $o) => (object) [
+                'date' => $o->received_at, 'type' => 'giris', 'number' => $o->number, 'product' => $o->product,
+                'gram' => $o->gross_in, 'purity' => $o->purity, 'has' => $o->has_in,
+                'url' => route('work-orders.show', $o), 'sort' => 'a'.$o->id,
+            ]);
+
+        $out = WorkOrderDelivery::query()->where('account_id', $account->id)
+            ->when($from, fn ($q) => $q->where('delivered_at', '>=', $from))
+            ->when($until, fn ($q) => $q->where('delivered_at', '<', $until))
+            ->get()
+            ->map(fn (WorkOrderDelivery $d) => (object) [
+                'date' => $d->delivered_at, 'type' => 'cikis', 'number' => $d->number, 'product' => $d->product,
+                'gram' => $d->gross_out, 'purity' => $d->purity_out, 'has' => $d->has_out,
+                'url' => route('workshop-deliveries.receipt', $d), 'sort' => 'b'.$d->id,
+            ]);
+
+        return $in->concat($out)->sortBy([['date', 'asc'], ['sort', 'asc']])->values();
     }
 }

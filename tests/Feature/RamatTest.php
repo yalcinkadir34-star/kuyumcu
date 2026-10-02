@@ -36,7 +36,8 @@ class RamatTest extends TestCase
 
     private function cikis(WorkOrder $order, string $gram, string $milyem): void
     {
-        $this->actingAs($this->user)->post(route('work-orders.deliver', $order), [
+        $this->actingAs($this->user)->post(route('workshop-deliveries.store'), [
+            'account_id' => $order->account_id,
             'delivered_at' => '2026-10-02T10:00:00',
             'gross_out' => $gram,
             'purity_out' => $milyem,
@@ -81,9 +82,11 @@ class RamatTest extends TestCase
         // Müşteri detayı: sadece o müşterinin fişleri
         $this->get(route('ramat.index', ['cari' => $a->id]))
             ->assertOk()
-            ->assertSee('Birinci Firma · fiş bazında ramat')
+            ->assertSee('Birinci Firma · giriş ve çıkışlar')
             ->assertSee('A00001')
             ->assertSee('A00002')
+            ->assertSee('T00001')
+            ->assertSee('T00002')
             ->assertDontSee('A00003');
     }
 
