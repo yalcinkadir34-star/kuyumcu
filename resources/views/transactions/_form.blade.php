@@ -58,8 +58,8 @@
         </div>
 
         <div>
-            <label for="date" class="label">Tarih <span class="text-red-500">*</span></label>
-            <input id="date" name="date" type="date" required value="{{ old('date', $transaction->date?->format('Y-m-d') ?? $transaction->date) }}"
+            <label for="date" class="label">Tarih ve saat <span class="text-red-500">*</span></label>
+            <input id="date" name="date" type="datetime-local" step="1" required value="{{ old('date', $transaction->date?->format('Y-m-d\TH:i:s')) }}"
                    class="input @error('date') input-error @enderror">
             @error('date') <p class="field-error">{{ $message }}</p> @enderror
         </div>

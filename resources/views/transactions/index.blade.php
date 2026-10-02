@@ -69,7 +69,7 @@
                 <tbody>
                     @forelse ($transactions as $transaction)
                         <tr>
-                            <td class="whitespace-nowrap text-stone-600">{{ $transaction->date->format('d.m.Y') }}</td>
+                            <td class="whitespace-nowrap text-stone-600">{{ $transaction->date->format('d.m.Y H:i:s') }}</td>
                             <td><span class="badge {{ $transaction->type->badgeClass() }}">{{ $transaction->type->label() }}</span></td>
                             <td>
                                 @if ($transaction->account)

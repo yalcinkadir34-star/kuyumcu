@@ -13,7 +13,7 @@ class Transaction extends Model
     protected function casts(): array
     {
         return [
-            'date' => 'date',
+            'date' => 'datetime',
             'type' => TransactionType::class,
             'amount' => 'decimal:3',
             'account_direction' => 'integer',

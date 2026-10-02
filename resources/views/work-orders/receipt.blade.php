@@ -56,14 +56,14 @@
 
         <dl class="mt-2 space-y-0.5">
             <div class="flex justify-between gap-2"><dt class="text-stone-500">Fiş No</dt><dd class="font-mono font-semibold">{{ $no }}</dd></div>
-            <div class="flex justify-between gap-2"><dt class="text-stone-500">Tarih</dt><dd>{{ $delivery->delivered_at->format('d.m.Y') }}</dd></div>
+            <div class="flex justify-between gap-2"><dt class="text-stone-500">Tarih</dt><dd>{{ $delivery->delivered_at->format('d.m.Y H:i') }}</dd></div>
             <div class="flex justify-between gap-2"><dt class="text-stone-500">Müşteri</dt><dd class="text-right font-semibold">{{ $order->account->name }}</dd></div>
             <div class="flex justify-between gap-2"><dt class="text-stone-500">Ürün</dt><dd class="text-right">{{ $order->product }}</dd></div>
         </dl>
 
         {{-- Giriş --}}
         <div class="mt-3 border-t border-dashed border-stone-400 pt-2">
-            <div class="font-semibold">GİRİŞ · {{ $order->received_at->format('d.m.Y') }}</div>
+            <div class="font-semibold">GİRİŞ · {{ $order->received_at->format('d.m.Y H:i') }}</div>
             <dl class="mt-1 space-y-0.5">
                 <div class="flex justify-between"><dt>Gram</dt><dd class="tabular-nums">{{ Amount::format($order->gross_in, $gr) }}</dd></div>
                 <div class="flex justify-between">
@@ -76,7 +76,7 @@
 
         {{-- Bu çıkış --}}
         <div class="mt-3 border-t border-dashed border-stone-400 pt-2">
-            <div class="font-semibold">ÇIKIŞ · {{ $delivery->delivered_at->format('d.m.Y') }}</div>
+            <div class="font-semibold">ÇIKIŞ · {{ $delivery->delivered_at->format('d.m.Y H:i') }}</div>
             <dl class="mt-1 space-y-0.5">
                 <div class="flex justify-between"><dt>Gram</dt><dd class="tabular-nums">{{ Amount::format($delivery->gross_out, $gr) }}</dd></div>
                 <div class="flex justify-between">

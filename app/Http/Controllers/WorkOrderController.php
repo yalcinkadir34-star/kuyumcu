@@ -12,6 +12,7 @@ use App\Support\Amount;
 use App\Support\Workshop;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -34,7 +35,7 @@ class WorkOrderController extends Controller
             ->when($status !== 'tumu', fn ($q) => $q->where('status', $status))
             ->when($filters['cari'] ?? null, fn ($q, $id) => $q->where('account_id', $id))
             ->when($filters['baslangic'] ?? null, fn ($q, $d) => $q->where('received_at', '>=', $d))
-            ->when($filters['bitis'] ?? null, fn ($q, $d) => $q->where('received_at', '<=', $d))
+            ->when($filters['bitis'] ?? null, fn ($q, $d) => $q->where('received_at', '<', Carbon::parse($d)->addDay()->toDateString()))
             ->when($filters['q'] ?? null, function ($q, $term) {
                 $q->where(fn ($q) => $q->where('number', 'like', "%{$term}%")
                     ->orWhere('product', 'like', "%{$term}%")
@@ -57,7 +58,7 @@ class WorkOrderController extends Controller
     {
         $order = new WorkOrder([
             'account_id' => $request->integer('cari') ?: null,
-            'received_at' => now()->toDateString(),
+            'received_at' => now()->format('Y-m-d H:i:s'),
         ]);
 
         return view('work-orders.create', $this->formData($order));
@@ -227,8 +228,8 @@ class WorkOrderController extends Controller
     {
         $open = WorkOrder::query()->inWorkshop()->withDeliveryTotals()->get();
 
-        $monthStart = now()->startOfMonth()->toDateString();
-        $monthEnd = now()->endOfMonth()->toDateString();
+        $monthStart = now()->startOfMonth()->format('Y-m-d H:i:s');
+        $monthEnd = now()->endOfMonth()->format('Y-m-d H:i:s');
 
         $monthOut = WorkOrderDelivery::query()
             ->whereBetween('delivered_at', [$monthStart, $monthEnd])

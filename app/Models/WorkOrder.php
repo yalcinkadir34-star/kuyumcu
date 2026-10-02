@@ -34,7 +34,7 @@ class WorkOrder extends Model
     protected function casts(): array
     {
         return [
-            'received_at' => 'date',
+            'received_at' => 'datetime',
             'closed_at' => 'date',
             'gross_in' => 'decimal:3',
             'purity' => 'decimal:4',

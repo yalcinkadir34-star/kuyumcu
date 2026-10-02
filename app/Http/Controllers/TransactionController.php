@@ -12,6 +12,7 @@ use App\Models\WorkOrder;
 use App\Support\Amount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 class TransactionController extends Controller
@@ -29,7 +30,7 @@ class TransactionController extends Controller
         $transactions = Transaction::query()
             ->with(['account', 'cashRegister', 'currency', 'creator'])
             ->when($filters['baslangic'] ?? null, fn ($q, $d) => $q->where('date', '>=', $d))
-            ->when($filters['bitis'] ?? null, fn ($q, $d) => $q->where('date', '<=', $d))
+            ->when($filters['bitis'] ?? null, fn ($q, $d) => $q->where('date', '<', Carbon::parse($d)->addDay()->toDateString()))
             ->when($filters['tur'] ?? null, fn ($q, $t) => $q->where('type', $t))
             ->when($filters['birim'] ?? null, fn ($q, $c) => $q->where('currency_id', $c))
             ->when($filters['q'] ?? null, function ($q, $term) {
@@ -56,7 +57,7 @@ class TransactionController extends Controller
         $type = TransactionType::tryFrom((string) $request->query('tur')) ?? TransactionType::Tahsilat;
 
         $transaction = new Transaction([
-            'date' => now()->toDateString(),
+            'date' => now()->format('Y-m-d H:i:s'),
             'type' => $type,
             'account_id' => $request->integer('cari') ?: null,
             'cash_register_id' => $request->integer('kasa') ?: CashRegister::query()->active()->value('id'),

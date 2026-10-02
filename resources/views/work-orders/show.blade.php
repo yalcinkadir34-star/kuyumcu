@@ -44,7 +44,7 @@
     <div class="card">
         <dl class="grid divide-y divide-stone-100 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
             <div class="p-5">
-                <dt class="text-xs font-medium text-stone-500">Giriş · {{ $order->received_at->format('d.m.Y') }}</dt>
+                <dt class="text-xs font-medium text-stone-500">Giriş · {{ $order->received_at->format('d.m.Y H:i:s') }}</dt>
                 <dd class="mt-1 text-xl font-semibold tabular-nums">{{ Amount::format($order->gross_in, $gr) }}</dd>
                 <dd class="mt-0.5 text-xs text-stone-500">
                     Ayar {{ $p($order->purity) }} + işçilik {{ $p($order->labor_purity_in) }} = <span class="font-medium text-stone-700">{{ $p($order->inPurity()) }}</span>
@@ -101,7 +101,7 @@
                             @foreach ($order->deliveries as $delivery)
                                 <tr>
                                     <td class="whitespace-nowrap text-stone-600">
-                                        {{ $delivery->delivered_at->format('d.m.Y') }}
+                                        {{ $delivery->delivered_at->format('d.m.Y H:i:s') }}
                                         @if ($delivery->notes)
                                             <div class="text-xs text-stone-400">{{ $delivery->notes }}</div>
                                         @endif
@@ -168,9 +168,9 @@
                         </div>
 
                         <div>
-                            <label for="delivered_at" class="label">Çıkış tarihi <span class="text-red-500">*</span></label>
-                            <input id="delivered_at" name="delivered_at" type="date" required
-                                   value="{{ old('delivered_at', now()->format('Y-m-d')) }}"
+                            <label for="delivered_at" class="label">Çıkış tarihi ve saati <span class="text-red-500">*</span></label>
+                            <input id="delivered_at" name="delivered_at" type="datetime-local" step="1" required
+                                   value="{{ old('delivered_at', now()->format('Y-m-d\TH:i:s')) }}"
                                    class="input @error('delivered_at') input-error @enderror">
                             @error('delivered_at') <p class="field-error">{{ $message }}</p> @enderror
                         </div>

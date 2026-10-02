@@ -92,7 +92,7 @@
                                     @endif
                                 </div>
                             </td>
-                            <td class="whitespace-nowrap text-stone-600">{{ $order->received_at->format('d.m.Y') }}</td>
+                            <td class="whitespace-nowrap text-stone-600">{{ $order->received_at->format('d.m.Y H:i:s') }}</td>
                             <td>
                                 <div class="font-medium text-stone-900">{{ $order->account->name }}</div>
                                 <div class="max-w-64 truncate text-xs text-stone-500">{{ $order->product }}</div>

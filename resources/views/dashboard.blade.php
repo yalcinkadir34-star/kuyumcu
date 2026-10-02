@@ -93,7 +93,7 @@
                     <tbody>
                         @foreach ($recent as $transaction)
                             <tr>
-                                <td class="w-28 whitespace-nowrap text-stone-500">{{ $transaction->date->format('d.m.Y') }}</td>
+                                <td class="w-44 whitespace-nowrap text-stone-500">{{ $transaction->date->format('d.m.Y H:i:s') }}</td>
                                 <td class="w-44"><span class="badge {{ $transaction->type->badgeClass() }}">{{ $transaction->type->label() }}</span></td>
                                 <td>
                                     @if ($transaction->account)

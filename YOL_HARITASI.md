@@ -409,6 +409,20 @@ Symfony Process ortam değişkenlerini `$_SERVER` ile süzdüğü için `SystemR
 - Önizleme notu: gerçek veriye dokunmamak için ayrı `kuyumcu_onizleme` veritabanı ve 8001 portu kullanıldı, sonra silindi.
   `artisan serve` alt sunucuya `DB_DATABASE` aktarmıyor, bu yüzden `php -S ... server.php` ve farklı `SESSION_COOKIE` gerekiyor
 
+### ✅ v0.5.1: İşlemlerde saat:dakika:saniye (02.10.2026)
+
+**Kullanıcı isteği:** "Cari ve atölye işlemlerinde tarihin yanında saat, dakika, saniye olsun. İşlem sırasını gün gün
+değil saat-dakika-saniye sırasına göre görmek istiyorum."
+
+- `transactions.date`, `work_orders.received_at`, `work_order_deliveries.delivered_at` artık **datetime**
+- Formlarda **tarih + saat** seçici (`datetime-local`, saniyeli). Varsayılan: formun açıldığı an
+- Listeler, ekstre, ana sayfa, atölye fişi detayı: `gg.aa.yyyy ss:dd:sn`. Müşteri fişinde `gg.aa.yyyy ss:dd`
+- Ekstre ve listeler saate göre sıralanır (aynı saniyede eşitlikte kayıt sırası)
+- Tarih filtrelerinde **bitiş günü tamamen dahil** (ör. bitiş 02.10 → 02.10 23:59:59'a kadar)
+- Mevcut kayıtlar: saat, kaydın sisteme girildiği andan alındı (gün değişmedi)
+- Yedek: `storage/app/yedek/kuyumcu-2026-10-02-saat-oncesi.sql`
+- Testler: 84 test, hepsi geçiyor
+
 ---
 
 ## 5. Yapılacaklar

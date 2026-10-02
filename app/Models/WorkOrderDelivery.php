@@ -22,7 +22,7 @@ class WorkOrderDelivery extends Model
     protected function casts(): array
     {
         return [
-            'delivered_at' => 'date',
+            'delivered_at' => 'datetime',
             'gross_out' => 'decimal:3',
             'labor_purity' => 'decimal:4',
             'has_out' => 'decimal:3',

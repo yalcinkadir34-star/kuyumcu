@@ -57,7 +57,7 @@
 
                 @forelse ($ledger['rows'] as $row)
                     <tr>
-                        <td class="whitespace-nowrap text-stone-600">{{ $row->date->format('d.m.Y') }}</td>
+                        <td class="whitespace-nowrap text-stone-600">{{ $row->date->format('d.m.Y H:i:s') }}</td>
                         <td><span class="badge {{ $row->type->badgeClass() }}">{{ $row->type->label() }}</span></td>
                         <td class="text-stone-600">
                             @if ($isCari)

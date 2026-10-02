@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -35,7 +36,7 @@ class Ledger
 
         $rows = (clone $query)
             ->when($from, fn ($q) => $q->where('date', '>=', $from))
-            ->when($to, fn ($q) => $q->where('date', '<=', $to))
+            ->when($to, fn ($q) => $q->where('date', '<', Carbon::parse($to)->addDay()->toDateString()))
             ->with(['currency', 'account', 'cashRegister', 'creator'])
             ->orderBy('date')
             ->orderBy('id')

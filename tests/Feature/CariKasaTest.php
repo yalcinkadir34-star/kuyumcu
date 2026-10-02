@@ -184,6 +184,35 @@ class CariKasaTest extends TestCase
             ->assertSee('1.500,00 ₺');
     }
 
+    public function test_ayni_gundeki_hareketler_saat_sirasina_gore_dizilir(): void
+    {
+        $cari = Account::factory()->create();
+
+        // Önce öğleden sonraki işlem girildi, sonra sabahki: ekstre saat sırasına göre dizmeli
+        $this->hareketGir(['type' => 'cari_borc', 'account_id' => $cari->id, 'amount' => '200', 'date' => '2026-10-02T15:30:45', 'description' => 'Öğleden sonra']);
+        $this->hareketGir(['type' => 'cari_borc', 'account_id' => $cari->id, 'amount' => '100', 'date' => '2026-10-02T09:05:10', 'description' => 'Sabah']);
+
+        $this->assertSame('2026-10-02 15:30:45', Transaction::firstWhere('description', 'Öğleden sonra')->date->format('Y-m-d H:i:s'));
+
+        $this->actingAs($this->user)
+            ->get(route('accounts.show', $cari))
+            ->assertOk()
+            ->assertSeeInOrder(['02.10.2026 09:05:10', 'Sabah', '02.10.2026 15:30:45', 'Öğleden sonra']);
+    }
+
+    public function test_bitis_tarihi_o_gunun_tamamini_kapsar(): void
+    {
+        $cari = Account::factory()->create();
+        $this->hareketGir(['type' => 'cari_borc', 'account_id' => $cari->id, 'amount' => '100', 'date' => '2026-10-02T23:59:59', 'description' => 'Gece yarısından önce']);
+
+        $this->actingAs($this->user)
+            ->get(route('transactions.index', ['baslangic' => '2026-10-02', 'bitis' => '2026-10-02']))
+            ->assertSee('Gece yarısından önce');
+
+        $this->get(route('accounts.show', ['account' => $cari, 'bitis' => '2026-10-02']))
+            ->assertSee('Gece yarısından önce');
+    }
+
     public function test_sayfalar_acilir(): void
     {
         $cari = Account::factory()->create();

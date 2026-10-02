@@ -23,7 +23,7 @@ class DeliverWorkOrderRequest extends FormRequest
         $order = $this->route('workOrder');
 
         return [
-            'delivered_at' => ['required', 'date', 'after_or_equal:'.$order->received_at->toDateString()],
+            'delivered_at' => ['required', 'date', 'after_or_equal:'.$order->received_at->format('Y-m-d H:i:s')],
             'gross_out' => ['required', function (string $attribute, mixed $value, Closure $fail) use ($order) {
                 $parsed = Amount::parse((string) $value);
 

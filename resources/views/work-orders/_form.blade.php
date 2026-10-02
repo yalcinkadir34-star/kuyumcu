@@ -68,9 +68,9 @@
         </div>
 
         <div>
-            <label for="received_at" class="label">Giriş tarihi <span class="text-red-500">*</span></label>
-            <input id="received_at" name="received_at" type="date" required
-                   value="{{ old('received_at', $order->received_at?->format('Y-m-d')) }}"
+            <label for="received_at" class="label">Giriş tarihi ve saati <span class="text-red-500">*</span></label>
+            <input id="received_at" name="received_at" type="datetime-local" step="1" required
+                   value="{{ old('received_at', $order->received_at?->format('Y-m-d\TH:i:s')) }}"
                    class="input @error('received_at') input-error @enderror">
             @error('received_at') <p class="field-error">{{ $message }}</p> @enderror
         </div>
