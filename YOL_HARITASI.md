@@ -441,6 +441,12 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 
 ## 5. Yapılacaklar
 
+### 🧪 Deneme carisi
+- **`halit` (C00005, id 6)** kullanıcının **deneme/demo** carisidir. Bu caride yapılan işlemler denemedir
+- Kullanıcı "sil" dediğinde: önce veritabanı yedeği alınır, sonra bu carinin **hareketleri, atölye fişleri (çıkışlarıyla)
+  ve carinin kendisi** silinir (MUSTAFA silme işlemiyle aynı yöntem, bkz. "Gerçek kullanıma geçiş")
+- Diğer cariler **gerçek veridir**, dokunulmaz
+
 ### ⏳ Sıradaki: kullanıcıdan özellik detayları bekleniyor
 Aşağıdaki modüller menüde yer tutucu olarak var. Kapsamları kullanıcıyla netleştirilecek.
 Kuyumculuk sektörü için **öneri** niteliğindeki başlıklar:
