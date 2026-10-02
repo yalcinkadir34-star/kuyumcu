@@ -9,7 +9,7 @@
         ['label' => 'Atölye', 'route' => 'work-orders.index', 'active' => 'work-orders.*', 'icon' => 'M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z'],
         ['label' => 'Ramat', 'route' => 'ramat.index', 'active' => 'ramat.*', 'icon' => 'M12 22c3.9 0 7-2.9 7-6.8 0-3.6-2.5-5.6-4-8.7-.9 1.8-1.9 2.8-3.6 3 .2-2.5-.8-4.8-2.9-6.5.2 4.2-3.5 6.4-3.5 12.2C5 19.1 8.1 22 12 22z'],
         ['label' => 'Stok', 'route' => null, 'icon' => 'M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8'],
-        ['label' => 'Raporlar', 'route' => null, 'icon' => 'M4 20V10M10 20V4M16 20v-7M22 20H2'],
+        ['label' => 'Raporlar', 'route' => 'reports.customer', 'active' => 'reports.*', 'icon' => 'M4 20V10M10 20V4M16 20v-7M22 20H2'],
         ['label' => 'Yedekleme', 'route' => 'backups.index', 'active' => 'backups.*', 'admin' => true, 'icon' => 'M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 7v5c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12v5c0 1.7 3.6 3 8 3s8-1.3 8-3v-5'],
         ['label' => 'Ayarlar', 'route' => null, 'icon' => 'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z'],
     ];
@@ -22,13 +22,13 @@
     <title>@yield('title') · {{ config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-stone-100 font-sans text-stone-800 antialiased">
+<body class="min-h-screen bg-stone-100 font-sans text-stone-800 antialiased print:bg-white">
     {{-- Mobil menü arka planı --}}
     <div id="sidebar-backdrop" data-sidebar-toggle class="fixed inset-0 z-30 hidden bg-stone-900/50 lg:hidden"></div>
 
     {{-- Yan menü --}}
     <aside id="sidebar"
-           class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col bg-stone-900 text-stone-300 transition-transform lg:translate-x-0">
+           class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col bg-stone-900 text-stone-300 transition-transform lg:translate-x-0 print:hidden">
         <div class="flex h-16 items-center gap-3 border-b border-white/5 px-5">
             <x-logo class="size-9" />
             <span class="font-semibold tracking-wide text-white">{{ config('app.name') }}</span>
@@ -63,9 +63,9 @@
         </div>
     </aside>
 
-    <div class="lg:pl-64">
+    <div class="lg:pl-64 print:pl-0">
         {{-- Üst bar --}}
-        <header class="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-stone-200 bg-white/90 px-4 backdrop-blur sm:px-6">
+        <header class="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-stone-200 bg-white/90 px-4 backdrop-blur sm:px-6 print:hidden">
             <button type="button" data-sidebar-toggle class="-ml-1 rounded-lg p-2 text-stone-600 hover:bg-stone-100 lg:hidden" aria-label="Menüyü aç">
                 <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
@@ -98,8 +98,8 @@
             </div>
         </header>
 
-        <main class="p-4 sm:p-6">
-            <x-flash />
+        <main class="p-4 sm:p-6 print:p-0">
+            <div class="print:hidden"><x-flash /></div>
             @yield('content')
         </main>
     </div>

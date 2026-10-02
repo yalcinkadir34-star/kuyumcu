@@ -10,6 +10,7 @@
             @unless ($account->is_active) · <span class="font-medium text-red-600">Pasif</span> @endunless
         </x-slot:subtitle>
         <x-slot:actions>
+            <a href="{{ route('reports.customer', ['cari' => $account->id]) }}" class="btn btn-secondary">Rapor</a>
             <a href="{{ route('accounts.edit', $account) }}" class="btn btn-secondary">Düzenle</a>
         </x-slot:actions>
     </x-page-header>

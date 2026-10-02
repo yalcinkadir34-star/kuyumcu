@@ -6,6 +6,7 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\CashRegisterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RamatController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WorkOrderController;
 use Illuminate\Support\Facades\Route;
@@ -29,6 +30,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->parameters(['kasalar' => 'cashRegister']);
 
     Route::get('/ramat', [RamatController::class, 'index'])->name('ramat.index');
+    Route::get('/raporlar/musteri', [ReportController::class, 'customer'])->name('reports.customer');
 
     Route::resource('atolye', WorkOrderController::class)
         ->names('work-orders')

@@ -492,9 +492,23 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Cari bakiyeler değişmedi (önce/sonra karşılaştırıldı). Yedek: `storage/app/yedek/kuyumcu-2026-10-02-fis-kapatma-kaldirma-oncesi.sql`
 - Testler: 85 test, hepsi geçiyor
 
-### ⏳ Sıradaki: müşteri bazlı ve yıllık rapor
-- **Kullanıcı isteği (02.10.2026):** "Müşteri bazlı rapor almak istiyorum. Yıllık bazda rapor almak istiyorum.
+### ✅ v0.7: Müşteri raporu, yıllık ya da tarih aralığı (02.10.2026)
+- **Kullanıcı isteği:** "Müşteri bazlı rapor almak istiyorum. Yıllık bazda rapor almak istiyorum.
   Bunları müşteri talep ederse verebileyim."
+- Menüde **Raporlar** açıldı → **Müşteri Raporu** (`/raporlar/musteri`). Cari detayında da **"Rapor"** butonu var
+- Seçim: **müşteri + yıl** (varsayılan bu yıl; ilk hareketin yılından bu yıla kadar seçilebilir) ya da **özel tarih aralığı**
+- **Yazdır** butonu: A4, yan menü ve üst çubuk yazdırılmaz (`print:hidden` ana şablona eklendi)
+- **Rapor içeriği** (sadece has hesabı, müşteri gözünden):
+  - Başlık: firma bilgileri, "Müşteri Hesap Raporu", dönem, düzenlenme tarihi, müşteri
+  - Özet: **dönem başı** (devir), **atölyeye verilen** (has + ürün gramı), **size teslim edilen** (has + gram), **dönem sonu**
+  - **Aylık özet** (yıllık raporda; Ocak–Aralık, verilen/teslim gram ve has, toplam)
+  - **Hareket dökümü:** devreden bakiye satırı, her hareket (tarih saat, fiş no, açıklama, gram, milyem, verilen/teslim has,
+    bakiye), dönem toplamı. Atölye hareketlerinde gram ve milyem fişten gelir; elle girilen cari hareketlerde boş
+  - Bakiye dili: **"Alacağınız"** (atölye müşteriye borçlu) / **"Borcunuz"**
+  - İmza alanları (firma ve müşteri), "bu rapor bilgi amaçlıdır" notu
+- **Ramat bilgisi raporda yok** (atölyenin iç bilgisi)
+- Teknik: `app/Http/Controllers/ReportController.php`, `resources/views/reports/customer.blade.php`
+- Testler: `tests/Feature/RaporTest.php`. Toplam 89 test, hepsi geçiyor
 
 ### 🧪 Deneme carisi
 - **`halit` (C00005, id 6)** kullanıcının **deneme/demo** carisidir. Bu caride yapılan işlemler denemedir
