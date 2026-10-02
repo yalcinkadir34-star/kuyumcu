@@ -465,6 +465,21 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Yedek: `storage/app/yedek/kuyumcu-2026-10-02-iscilik-kaldirma-oncesi.sql`
 - Testler: 82 test, hepsi geçiyor
 
+### ✅ v0.6: Ramat hesabı (02.10.2026)
+- **Kullanıcının anlattığı işleyiş:** Müşteri ör. 50 gr 0,585 ile getirir, parça parça çıkılır (ör. 25 gr 0,625 ile).
+  Çıkmayan kısım atölyede, **ramatta** kalır (50 gramda genelde 7-8 gr). Bu yüzden müşteriye has borcu sürekli artar.
+  **Hesap müşteriyle hiç kapatılmaz**, ramat hesabı ayrı bir yerde görülür
+  - Önce "has borcunu kapat" butonu düşünüldü, kullanıcı "hesap hiç kapatılmıyor" deyince **yapılmadı**
+- **Ramat sayfası** (`/ramat`, menüde "Ramat"): sadece görüntüleme, kayıt değiştirmez
+  - Özet: ramatta kalan gram (ve girişe oranı), ramattaki has, müşterilere toplam has borcu, fiş/müşteri sayısı
+  - **Müşteri bazında tablo:** fiş sayısı, giren gr, çıkan gr, **ramat gr (%)**, ramat has, has borcu. Altta toplam
+  - Müşteriye tıklayınca **fiş bazında detay** (her fişin giren, milyem, çıkan, ramat gr ve has değeri)
+  - **Tarih aralığı** filtresi (fişin giriş tarihine göre)
+  - Formüller: ramat gr = giriş − çıkışlar · ramat has = ramat gr × giriş milyemi · has borcu = giriş has − çıkış has
+- Açık ve kapalı (tamamlanan) fişlerin hepsi dahil
+- Yapılmadı (ileride istenirse): **ramat sonucu kaydı** (eritilen ramattan çıkan has ile beklenen karşılaştırması)
+- Testler: `tests/Feature/RamatTest.php`. Toplam 85 test, hepsi geçiyor
+
 ### 🧪 Deneme carisi
 - **`halit` (C00005, id 6)** kullanıcının **deneme/demo** carisidir. Bu caride yapılan işlemler denemedir
 - Kullanıcı "sil" dediğinde: önce veritabanı yedeği alınır, sonra bu carinin **hareketleri, atölye fişleri (çıkışlarıyla)

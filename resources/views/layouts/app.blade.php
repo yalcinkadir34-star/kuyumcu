@@ -7,6 +7,7 @@
         ['label' => 'Kasalar', 'route' => 'cash-registers.index', 'active' => 'cash-registers.*', 'icon' => 'M3 7h18v12H3zM3 7l2-3h14l2 3M12 11v4M10 13h4'],
         ['label' => 'Hareketler', 'route' => 'transactions.index', 'active' => 'transactions.*', 'icon' => 'M7 4v16M7 4L3 8M7 4l4 4M17 20V4M17 20l-4-4M17 20l4-4'],
         ['label' => 'Atölye', 'route' => 'work-orders.index', 'active' => 'work-orders.*', 'icon' => 'M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z'],
+        ['label' => 'Ramat', 'route' => 'ramat.index', 'active' => 'ramat.*', 'icon' => 'M12 22c3.9 0 7-2.9 7-6.8 0-3.6-2.5-5.6-4-8.7-.9 1.8-1.9 2.8-3.6 3 .2-2.5-.8-4.8-2.9-6.5.2 4.2-3.5 6.4-3.5 12.2C5 19.1 8.1 22 12 22z'],
         ['label' => 'Stok', 'route' => null, 'icon' => 'M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8'],
         ['label' => 'Raporlar', 'route' => null, 'icon' => 'M4 20V10M10 20V4M16 20v-7M22 20H2'],
         ['label' => 'Yedekleme', 'route' => 'backups.index', 'active' => 'backups.*', 'admin' => true, 'icon' => 'M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 7v5c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12v5c0 1.7 3.6 3 8 3s8-1.3 8-3v-5'],
