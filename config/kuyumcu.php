@@ -65,6 +65,9 @@ return [
         'times' => ['10:00', '15:00', '20:00'],
         'drive_keep' => 90, // Drive'da saklanacak en fazla yedek sayısı (~30 gün)
         'drive_folder_name' => 'Kuyumcu Yedekleri',
+        // Google Drive masaüstü programının bilgisayardaki klasörü (ör. G:/Drive'ım/Kuyumcu Yedekleri).
+        // Doluysa yedekler buraya kopyalanır, Drive programı da internete yükler (Google Cloud ayarı gerekmez).
+        'drive_klasoru' => env('GOOGLE_DRIVE_KLASORU'),
         'google_client_id' => env('GOOGLE_DRIVE_CLIENT_ID'),
         'google_client_secret' => env('GOOGLE_DRIVE_CLIENT_SECRET'),
     ],

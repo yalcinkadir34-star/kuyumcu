@@ -27,6 +27,7 @@ class BackupController extends Controller
             'logs' => BackupLog::query()->with('user')->latest('id')->paginate(30),
             'lastSuccess' => $lastSuccess,
             'drive' => $this->drive,
+            'driveFolder' => BackupService::driveFolder(),
             'redirectUri' => route('backups.google.callback'),
             'times' => config('kuyumcu.backup.times'),
         ]);

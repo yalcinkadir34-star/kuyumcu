@@ -20,7 +20,16 @@ if (-not (Test-Port 3306)) {
 }
 
 # 2) Site: http://localhost:8000
-if (-not (Test-Port 8000)) {
-    Start-Process -WindowStyle Hidden -WorkingDirectory $project -FilePath $php `
-        -ArgumentList 'artisan', 'serve', '--port=8000'
+# Tarayıcı "localhost"u önce IPv6 (::1), sonra 127.0.0.1 olarak dener. Sadece biri dinlenirse
+# her istekte ~0,2 sn bekleme olur; bu yüzden iki adres de ayrı PHP sunucusuyla dinlenir.
+$server = "$project\vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php"
+
+foreach ($address in @('127.0.0.1', '::1')) {
+    $listening = Get-NetTCPConnection -LocalAddress $address -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue
+
+    if (-not $listening) {
+        $hostPort = if ($address -eq '::1') { '[::1]:8000' } else { "${address}:8000" }
+        Start-Process -WindowStyle Hidden -WorkingDirectory "$project\public" -FilePath $php `
+            -ArgumentList '-S', $hostPort, "`"$server`""
+    }
 }

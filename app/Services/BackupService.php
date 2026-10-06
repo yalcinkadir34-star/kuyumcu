@@ -75,6 +75,12 @@ class BackupService
 
     private function uploadToDrive(BackupLog $log): void
     {
+        if (self::driveFolder()) {
+            $this->copyToDriveFolder($log);
+
+            return;
+        }
+
         if (! $this->drive->isConnected()) {
             $log->drive_status = 'bagli_degil';
 
@@ -87,6 +93,49 @@ class BackupService
             $this->drive->prune(config('kuyumcu.backup.drive_keep'));
         } catch (Throwable $e) {
             Log::error('Google Drive yükleme hatası', ['exception' => $e]);
+            $log->drive_status ??= 'hata';
+            $log->error = 'Google Drive: '.$e->getMessage();
+        }
+    }
+
+    /** Google Drive masaüstü programının klasörü (config: kuyumcu.backup.drive_klasoru); boşsa null. */
+    public static function driveFolder(): ?string
+    {
+        $folder = trim((string) config('kuyumcu.backup.drive_klasoru'));
+
+        return $folder === '' ? null : rtrim(str_replace('\\', '/', $folder), '/');
+    }
+
+    /**
+     * Yedeği Google Drive masaüstü klasörüne kopyalar; Drive programı internete yükler.
+     * Klasördeki en yeni drive_keep yedek tutulur, eskileri silinir.
+     */
+    private function copyToDriveFolder(BackupLog $log): void
+    {
+        $folder = self::driveFolder();
+
+        try {
+            // Üst klasör yoksa (ör. G: sürücüsü takılı değil) Drive programı çalışmıyordur
+            if (! is_dir(dirname($folder))) {
+                throw new RuntimeException("{$folder} bulunamadı. Google Drive programı açık mı?");
+            }
+
+            if (! is_dir($folder) && ! mkdir($folder, 0777, true) && ! is_dir($folder)) {
+                throw new RuntimeException("{$folder} klasörü oluşturulamadı.");
+            }
+
+            if (! copy(Storage::disk('local')->path($log->file_path), "{$folder}/{$log->file_name}")) {
+                throw new RuntimeException("Yedek {$folder} klasörüne kopyalanamadı.");
+            }
+
+            $log->drive_status = 'yuklendi';
+
+            collect(glob("{$folder}/*.zip") ?: [])
+                ->sortByDesc(fn (string $path) => filemtime($path))
+                ->slice((int) config('kuyumcu.backup.drive_keep'))
+                ->each(fn (string $path) => @unlink($path));
+        } catch (Throwable $e) {
+            Log::error('Google Drive klasörüne kopyalama hatası', ['exception' => $e]);
             $log->drive_status ??= 'hata';
             $log->error = 'Google Drive: '.$e->getMessage();
         }

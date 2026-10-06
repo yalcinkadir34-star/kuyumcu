@@ -606,6 +606,24 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
   - Veritabanı: `transactions.reconciled_at`, `reconciled_by`. Rotalar: `POST|DELETE /hareketler/{id}/mutabik`
 - Testler: 96 test, hepsi geçiyor
 
+### ✅ v0.9.3: Yedekler Google Drive masaüstü klasörüne, sistem hızlandı (06.10.2026)
+- **Google Drive:** Google Cloud'da "Publish app" butonu pasif kaldı (yayın için internet adresi + gizlilik sayfası isteniyor).
+  Kullanıcı **Google Drive masaüstü programını** kurdu; yedekler artık onun klasörüne kopyalanıyor, Drive programı internete yüklüyor
+  - `.env` → `GOOGLE_DRIVE_KLASORU="G:/Drive'ım/Kuyumcu Yedekleri"` (config: `kuyumcu.backup.drive_klasoru`)
+  - Doluysa API bağlantısı yerine klasör kullanılır; klasörde en yeni 90 yedek tutulur (`drive_keep`), eskileri silinir
+  - G: yoksa (Drive programı kapalı) yedek yine bilgisayarda alınır, Drive sütununda "Yüklenemedi" + sebep görünür
+  - Yedekleme sayfasında Drive kartı "Masaüstü klasörü" ve klasör yolunu gösterir; Google Cloud kurulum adımları gizlenir
+  - "Kuyumcu Yedek" görevi kullanıcının oturumunda (Interactive) çalıştığı için G: sürücüsünü görüyor. Gerçek yedekle denendi ✓
+  - Testlerde `phpunit.xml` → `GOOGLE_DRIVE_KLASORU=""` (testler gerçek Drive klasörüne dokunmaz)
+- **Hız** (kullanıcı: "program biraz yavaş çalışıyor"):
+  - PHP **OPcache açıldı** (Laragon `php.ini`: `zend_extension=opcache`, `opcache.enable_cli=1`, realpath cache).
+    Sayfa süresi ~700 ms → ~100 ms. Yedek: `php.ini.yedek-20261006` (aynı klasörde)
+  - `localhost` her istekte ~200 ms bekliyordu (tarayıcı önce IPv6 `::1`'i dener). `sistemi-baslat.ps1` artık
+    `artisan serve` yerine **iki PHP sunucusu** başlatır: `127.0.0.1:8000` ve `[::1]:8000` (kök: `public/`)
+  - Sayfalar ölçüldü: veritabanı sorguları az ve hızlı (sayfa başına 5–15 sorgu, <30 ms), N+1 sorunu yok
+  - ⚠️ PHP sürümü değişirse (Laragon güncellemesi) OPcache yeni `php.ini`'de tekrar açılmalı
+- Testler: 98 test, hepsi geçiyor
+
 ### 🧪 Deneme carileri
 - **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir
 - **02.10.2026: ikisi de sıfırlandı** (kullanıcı: "deneme olarak halit ve kadir hesabını kullandık, bunları sıfırla").
@@ -630,7 +648,7 @@ Kuyumculuk sektörü için **öneri** niteliğindeki başlıklar:
 - [x] Parçalı teslim (bir girişin birkaç seferde çıkışı) (v0.3.2)
 - [ ] Atölye fişi yazdırma (giriş/teslim fişi)
 - [x] **Google Drive'a otomatik yedek** + yedek butonu + günde 3 otomatik yedek (v0.4)
-  - [ ] Kullanıcı Google Cloud kurulumunu yapıp Drive'ı bağlayacak
+  - [x] Drive bağlandı: Google Drive masaüstü klasörü üzerinden (v0.9.3)
   - [x] Windows Görev Zamanlayıcı görevi kuruldu ve denendi (02.10.2026)
 - [ ] Yedekten geri yükleme ekranı (şimdilik: zip'teki .sql dosyası HeidiSQL ile içe aktarılır)
 - [ ] **Stok**: ürün/hammadde, gram ve ayar bazında takip

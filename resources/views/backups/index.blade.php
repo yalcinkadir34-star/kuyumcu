@@ -37,7 +37,13 @@
         {{-- Google Drive durumu --}}
         <div class="card p-5">
             <div class="text-sm font-medium text-stone-500">Google Drive</div>
-            @if ($drive->isConnected())
+            @if ($driveFolder)
+                <div class="mt-2 flex items-center gap-2 text-xl font-semibold text-emerald-700">
+                    <span class="size-2.5 rounded-full bg-emerald-500"></span> Masaüstü klasörü
+                </div>
+                <div class="mt-1 text-xs break-all text-stone-500">{{ $driveFolder }}</div>
+                <div class="mt-1 text-xs text-stone-400">Yedekler bu klasöre kopyalanır, Google Drive programı internete yükler.</div>
+            @elseif ($drive->isConnected())
                 <div class="mt-2 flex items-center gap-2 text-xl font-semibold text-emerald-700">
                     <span class="size-2.5 rounded-full bg-emerald-500"></span> Bağlı
                 </div>
@@ -67,7 +73,7 @@
     </div>
 
     {{-- Google kurulum adımları --}}
-    @unless ($drive->isConnected())
+    @unless ($driveFolder || $drive->isConnected())
         <details class="card group mt-6" @unless ($drive->isConfigured()) open @endunless>
             <summary class="card-header cursor-pointer list-none">
                 <h3 class="font-semibold text-stone-900">Google Drive kurulumu (bir kerelik)</h3>

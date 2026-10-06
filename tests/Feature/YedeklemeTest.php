@@ -10,6 +10,7 @@ use App\Services\GoogleDrive;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -100,6 +101,47 @@ class YedeklemeTest extends TestCase
         $this->assertTrue($log->isSuccessful());
         $this->assertSame('hata', $log->drive_status);
         $this->assertStringContainsString('Google Drive', $log->error);
+    }
+
+    public function test_drive_klasoru_ayarliysa_yedek_klasore_kopyalanir_ve_eskiler_silinir(): void
+    {
+        $root = storage_path('framework/testing/drive-'.uniqid());
+        $folder = "{$root}/Kuyumcu Yedekleri";
+        mkdir($folder, 0777, true);
+        config(['kuyumcu.backup.drive_klasoru' => $folder, 'kuyumcu.backup.drive_keep' => 2]);
+
+        foreach (['eski-1.zip' => 100, 'eski-2.zip' => 50] as $name => $age) {
+            file_put_contents("{$folder}/{$name}", 'x');
+            touch("{$folder}/{$name}", time() - $age);
+        }
+
+        try {
+            $this->actingAs($this->admin)->post(route('backups.store'))->assertSessionHas('success');
+
+            $log = BackupLog::first();
+            $this->assertSame('yuklendi', $log->drive_status);
+            $this->assertSame('zip-icerigi', file_get_contents("{$folder}/kuyumcu-2026-10-01-10-00-00.zip"));
+            $this->assertFileDoesNotExist("{$folder}/eski-1.zip");
+            $this->assertFileExists("{$folder}/eski-2.zip");
+
+            $this->get(route('backups.index'))
+                ->assertSee('Masaüstü klasörü')
+                ->assertDontSee('Google Drive kurulumu');
+        } finally {
+            File::deleteDirectory($root);
+        }
+    }
+
+    public function test_drive_klasoru_yoksa_yedek_yerelde_kalir_hata_kaydedilir(): void
+    {
+        config(['kuyumcu.backup.drive_klasoru' => storage_path('framework/testing/olmayan-surucu/alt/Kuyumcu Yedekleri')]);
+
+        $this->actingAs($this->admin)->post(route('backups.store'))->assertSessionHas('error');
+
+        $log = BackupLog::first();
+        $this->assertTrue($log->isSuccessful());
+        $this->assertSame('hata', $log->drive_status);
+        $this->assertStringContainsString('Google Drive programı açık mı', $log->error);
     }
 
     public function test_google_baglantisi_kurulur(): void
