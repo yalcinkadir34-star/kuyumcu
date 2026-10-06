@@ -630,6 +630,9 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
   Tüm hareketleri, atölye girişleri (7) ve çıkışları (6) silindi; **cari kartları duruyor**, bakiyeleri 0.
   Kasa hareketi yoktu. Sıfırlamadan sonra sistemde hiç atölye girişi/çıkışı kalmadı
   - Yedek: `storage/app/yedek/kuyumcu-2026-10-02-halit-kadir-sifirlama-oncesi.sql`
+- **06.10.2026: `halit` tekrar sıfırlandı** (kullanıcı: "Halit carisi deneme olarak kullanıldı, buradaki işlemleri sıfırla").
+  1 atölye girişi (A00033), 1 çıkış (T00046, 3 satır) ve 4 hareket silindi; bakiye 0. Kart duruyor
+  - Yedek: `storage/app/yedek/kuyumcu-2026-10-06-halit-sifirlama-oncesi.sql`
 - Tekrar "sil/sıfırla" denirse: önce yedek, sonra aynı yöntem (çıkışlar → girişler → kalan hareketler, model üzerinden)
 - Diğer cariler **gerçek veridir**, dokunulmaz
 
