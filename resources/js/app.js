@@ -51,31 +51,53 @@ const formatNumber = (number, decimals = 3) =>
 // Has hesabı: küsurat atılır (sunucudaki Workshop::hasMilli ile aynı), 15,61875 → 15,618
 const hasOf = (gram, purity) => Math.trunc(Math.round(gram * purity * 1e7) / 1e4) / 1000;
 
-// Atölye giriş formu: has = gram × milyem; firmanın son milyemini öner
+// Atölye giriş formu: has = gram × milyem
+//  - Ürüne "14 ayar" gibi yazılınca milyem otomatik dolar (config/kuyumcu.php → ayar_milyem)
+//  - Ayar yazılmamışsa firmanın son milyemi önerilir
+//  - Milyem elle değiştirilirse otomatik doldurma artık ona dokunmaz
 const workOrderForm = document.querySelector('[data-workorder-form]');
 
 if (workOrderForm) {
     const gram = workOrderForm.querySelector('[data-gram]');
     const purity = workOrderForm.querySelector('[data-purity]');
+    const product = workOrderForm.querySelector('[data-product]');
     const account = workOrderForm.querySelector('[data-account]');
     const hint = workOrderForm.querySelector('[data-purity-hint]');
     const lastPurities = JSON.parse(workOrderForm.dataset.lastPurities || '{}');
+    const ayarMilyem = JSON.parse(workOrderForm.dataset.ayarMilyem || '{}');
+
+    // Düzenleme ya da hatalı form dönüşünde mevcut değer korunur
+    let purityTouched = purity.value.trim() !== '';
+
+    // "14 ayar", "14ayar", "14 AYAR", "14k" → 14
+    const ayarPattern = new RegExp(`(?:^|[^0-9])(${Object.keys(ayarMilyem).join('|')})\\s*(?:ayar|ayr|k)(?![a-zçğıöşü])`, 'i');
+    const ayarOf = () => product.value.match(ayarPattern)?.[1] ?? null;
 
     const update = () => {
         const has = hasOf(parseNumber(gram.value), parsePurity(purity.value));
         workOrderForm.querySelector('[data-has-out]').textContent = has > 0 ? formatNumber(has) : '—';
     };
 
-    const suggest = () => {
+    const fill = () => {
+        const ayar = ayarOf();
         const last = lastPurities[account.value];
-        hint.textContent = last ? `Bu firmanın son girişi: ${last}` : '';
-        if (last && purity.value === '') purity.value = last;
+
+        if (ayar) {
+            hint.textContent = `${ayar} ayar → ${ayarMilyem[ayar]} (değiştirebilirsiniz)`;
+            if (!purityTouched) purity.value = ayarMilyem[ayar];
+        } else {
+            hint.textContent = last ? `Bu firmanın son girişi: ${last}` : '';
+            if (!purityTouched && last) purity.value = last;
+        }
+
         update();
     };
 
+    purity.addEventListener('input', () => (purityTouched = purity.value.trim() !== ''));
+    product.addEventListener('input', fill);
+    account.addEventListener('change', fill);
     workOrderForm.addEventListener('input', update);
-    account.addEventListener('change', suggest);
-    suggest();
+    fill();
 }
 
 // Hızlı cari ekleme: formdan çıkmadan yeni cari oluşturur, listeye ekleyip seçer

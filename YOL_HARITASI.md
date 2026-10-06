@@ -552,6 +552,17 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Mevcut 3 çıkış "atolye" türünde. Yedek: `storage/app/yedek/kuyumcu-2026-10-02-cikis-turu-oncesi.sql`
 - Testler: 90 test, hepsi geçiyor
 
+### ✅ v0.8.2: Ürüne ayar yazınca milyem otomatik dolar (06.10.2026)
+- **Kullanıcı isteği:** "Atölyeye ürün girerken ürün kısmına 14 ayar yazınca milyem direkt 0,585 olarak yazsın, ama
+  değiştirebileyim. 8 ayar 0,333 · 18 ayar 0,750 · 22 ayar 0,916"
+- Atölye giriş formunda **Ürün** kutusuna "14 ayar", "14ayar", "14 AYAR", "14k" gibi yazılınca **Milyem** dolar,
+  altında "14 ayar → 0,585 (değiştirebilirsiniz)" ipucu çıkar
+- **Elle değiştirilen milyem korunur:** kullanıcı milyem kutusuna yazdıktan sonra ürün yazısı onu değiştirmez.
+  Düzenleme sayfasında mevcut milyem de korunur
+- Üründe ayar yoksa önceki davranış: firmanın son giriş milyemi önerilir
+- Tablo: `config/kuyumcu.php` → `ayar_milyem` (yeni ayar eklemek/değiştirmek için)
+- Testler: 91 test, hepsi geçiyor
+
 ### 🧪 Deneme carileri
 - **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir
 - **02.10.2026: ikisi de sıfırlandı** (kullanıcı: "deneme olarak halit ve kadir hesabını kullandık, bunları sıfırla").

@@ -350,6 +350,15 @@ class AtolyeTest extends TestCase
             ->assertSee('80mm auto', false);
     }
 
+    public function test_giris_formunda_ayar_milyem_tablosu_var(): void
+    {
+        // Ürüne "14 ayar" yazınca milyemi dolduran tablo sayfaya aktarılır (doldurma tarayıcıda yapılır)
+        $this->actingAs($this->user)->get(route('work-orders.create'))
+            ->assertOk()
+            ->assertSee('data-ayar-milyem=\'{"8":"0,333","14":"0,585","18":"0,750","22":"0,916"}\'', false)
+            ->assertSee('data-product', false);
+    }
+
     public function test_atolye_girisinden_hizli_cari_eklenir(): void
     {
         $this->actingAs($this->user)->get(route('work-orders.create'))->assertOk()->assertSee('Yeni Cari');

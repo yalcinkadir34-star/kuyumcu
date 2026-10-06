@@ -2,7 +2,7 @@
 @use('App\Support\Amount')
 @use('App\Support\Workshop')
 
-<div class="card" data-workorder-form data-last-purities='@json($lastPurities)'>
+<div class="card" data-workorder-form data-last-purities='@json($lastPurities)' data-ayar-milyem='@json(config("kuyumcu.ayar_milyem"))'>
     <div class="grid gap-5 p-5 sm:grid-cols-2">
         <div class="sm:col-span-2" data-quick-account data-url="{{ route('accounts.quick-store') }}">
             <label for="account_id" class="label">Firma <span class="text-red-500">*</span></label>
@@ -35,7 +35,7 @@
 
         <div class="sm:col-span-2">
             <label for="product" class="label">Ürün <span class="text-red-500">*</span></label>
-            <input id="product" name="product" value="{{ old('product', $order->product) }}" required
+            <input id="product" name="product" data-product value="{{ old('product', $order->product) }}" required
                    class="input @error('product') input-error @enderror" placeholder="Örn: 14 ayar döküm bilezik, 25 adet">
             @error('product') <p class="field-error">{{ $message }}</p> @enderror
         </div>
