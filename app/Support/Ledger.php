@@ -37,7 +37,7 @@ class Ledger
         $rows = (clone $query)
             ->when($from, fn ($q) => $q->where('date', '>=', $from))
             ->when($to, fn ($q) => $q->where('date', '<', Carbon::parse($to)->addDay()->toDateString()))
-            ->with(['currency', 'account', 'cashRegister', 'creator'])
+            ->with(['currency', 'account', 'cashRegister', 'creator', 'reconciler'])
             ->orderBy('date')
             ->orderBy('id')
             ->get();

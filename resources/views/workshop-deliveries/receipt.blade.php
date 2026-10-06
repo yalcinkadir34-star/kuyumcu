@@ -43,7 +43,7 @@
     ])>
         {{-- Başlık --}}
         <div class="border-b-2 border-stone-900 pb-2 text-center">
-            <div @class(['font-bold tracking-wide uppercase', 'text-lg' => ! $small, 'text-sm' => $small])>{{ $firma['name'] }}</div>
+            <div @class(['font-bold tracking-wide', 'text-lg' => ! $small, 'text-sm' => $small])>{{ $firma['name'] }}</div>
             @if ($firma['address'])
                 <div class="text-stone-600">{{ $firma['address'] }}</div>
             @endif
@@ -107,18 +107,6 @@
                     <div class="font-semibold">Hesabınız kapalı (bakiye yok)</div>
                 @endforelse
             </dl>
-        </div>
-
-        {{-- İmza --}}
-        <div class="mt-6 grid grid-cols-2 gap-4 text-center">
-            <div>
-                <div class="h-10 border-b border-stone-400"></div>
-                <div class="mt-1 text-stone-600">Teslim Eden</div>
-            </div>
-            <div>
-                <div class="h-10 border-b border-stone-400"></div>
-                <div class="mt-1 text-stone-600">Teslim Alan</div>
-            </div>
         </div>
 
         <div class="mt-4 text-center text-stone-500">Bu fiş bilgi amaçlıdır.</div>

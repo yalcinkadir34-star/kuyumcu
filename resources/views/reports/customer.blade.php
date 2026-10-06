@@ -75,7 +75,7 @@
             {{-- Başlık --}}
             <div class="flex flex-wrap items-start justify-between gap-4 border-b-2 border-stone-900 pb-3">
                 <div>
-                    <div class="text-lg font-bold tracking-wide uppercase">{{ $firma['name'] }}</div>
+                    <div class="text-lg font-bold tracking-wide">{{ $firma['name'] }}</div>
                     @if ($firma['address']) <div class="text-stone-600">{{ $firma['address'] }}</div> @endif
                     @if ($firma['phone']) <div class="text-stone-600">Tel: {{ $firma['phone'] }}</div> @endif
                 </div>

@@ -405,6 +405,8 @@ class AtolyeTest extends TestCase
             ->assertDontSee('26,250')
             // Son durum: 15,618 − 4,356 = 11,262 (ikinci çıkış sonradan yapıldı ama bu fişi etkilemez)
             ->assertSeeInOrder(['SON DURUM', 'Alacağınız (Has)', '11,262 gr'])
+            ->assertDontSee('Teslim Eden')
+            ->assertDontSee('Teslim Alan')
             ->assertSee('Bu fiş bilgi amaçlıdır.');
 
         // İkinci çıkış: son durum 11,262 − 5 × 0,625 = 8,137

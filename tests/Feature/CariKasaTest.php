@@ -213,6 +213,52 @@ class CariKasaTest extends TestCase
             ->assertSee('Gece yarısından önce');
     }
 
+    public function test_cari_ekstrede_mutabik_isaretlenir_ve_tarih_gorunur(): void
+    {
+        $cari = Account::factory()->create();
+        $this->hareketGir(['type' => 'cari_borc', 'account_id' => $cari->id, 'amount' => '100']);
+        $hareket = Transaction::first();
+
+        $this->actingAs($this->user)->get(route('accounts.show', $cari))->assertSee('Mutabakat')->assertSee('MUTABIK');
+
+        $this->travelTo(now()->setDate(2026, 10, 6)->setTime(14, 30));
+        $this->actingAs($this->user)->post(route('transactions.reconcile', $hareket))->assertSessionHas('success');
+
+        $hareket->refresh();
+        $this->assertTrue($hareket->isReconciled());
+        $this->assertSame($this->user->id, $hareket->reconciled_by);
+
+        $this->get(route('accounts.show', $cari))->assertSee('06.10.2026 14:30');
+
+        // Tekrar işaretlemek ilk tarihi değiştirmez
+        $this->travel(2)->days();
+        $this->post(route('transactions.reconcile', $hareket));
+        $this->assertSame('06.10.2026 14:30', $hareket->fresh()->reconciled_at->format('d.m.Y H:i'));
+
+        // Yönetici işareti kaldırabilir
+        $this->delete(route('transactions.unreconcile', $hareket))->assertSessionHas('success');
+        $this->assertFalse($hareket->fresh()->isReconciled());
+    }
+
+    public function test_personel_mutabik_isaretini_kaldiramaz(): void
+    {
+        $cari = Account::factory()->create();
+        $this->hareketGir(['type' => 'cari_borc', 'account_id' => $cari->id, 'amount' => '100']);
+        $hareket = Transaction::first();
+        $personel = User::factory()->create(['role' => User::ROLE_PERSONEL]);
+
+        $this->actingAs($personel)->post(route('transactions.reconcile', $hareket))->assertSessionHas('success');
+        $this->actingAs($personel)->delete(route('transactions.unreconcile', $hareket))->assertForbidden();
+        $this->assertTrue($hareket->fresh()->isReconciled());
+    }
+
+    public function test_kasa_ekstresinde_mutabakat_sutunu_yok(): void
+    {
+        $this->hareketGir(['type' => 'kasa_giris', 'cash_register_id' => $this->kasa->id, 'amount' => '100']);
+
+        $this->actingAs($this->user)->get(route('cash-registers.show', $this->kasa))->assertOk()->assertDontSee('Mutabakat');
+    }
+
     public function test_sayfalar_acilir(): void
     {
         $cari = Account::factory()->create();

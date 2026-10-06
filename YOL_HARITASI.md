@@ -592,6 +592,20 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - **10 ayar → 0,417** tabloya eklendi (`config/kuyumcu.php` → `ayar_milyem`)
 - Testler: 93 test, hepsi geçiyor
 
+### ✅ v0.9.2: Fiş başlığı, imza alanı kaldırıldı, cari ekstrede MUTABIK (06.10.2026)
+- **Kullanıcı isteği:** "Fişte Kuyumcu Atölye yazan yerde Kadir YALÇIN yazsın, karşı taraf fişin kimden geldiğini bilsin.
+  Fişte Teslim alan / Teslim eden kısmını sil. Cari ekstrede Borç Alacak Bakiye yanına MUTABIK butonu koy;
+  işaretlediğimde altında minik şekilde tarih yazsın, ileride problem olursa şu tarihte mutabık kalmışız diyebilelim."
+- **Fiş başlığı:** `.env` → `FIRMA_ADI="Kadir YALÇIN"` (müşteri fişi ve müşteri raporu başlığı). Büyük harfe çevirme kaldırıldı,
+  ad yazıldığı gibi görünür. ⚠️ Sunucuya taşınırken sunucunun `.env` dosyasına da yazılmalı
+- **Müşteri fişinden** "Teslim Eden / Teslim Alan" imza alanları kaldırıldı (müşteri raporunda imza alanları duruyor)
+- **MUTABIK** (sadece cari ekstrede, Bakiye'nin yanında "Mutabakat" sütunu):
+  - Her satırda **MUTABIK** butonu → onay sonrası işaretlenir; yeşil "✓ MUTABIK" ve altında **küçük tarih-saat**
+  - Üzerine gelince işaretleyen kullanıcı görünür. Tekrar basmak ilk tarihi değiştirmez
+  - İşareti **sadece yönetici** kaldırabilir (✕). Fişe bağlı (atölye) kayıtlar da işaretlenebilir
+  - Veritabanı: `transactions.reconciled_at`, `reconciled_by`. Rotalar: `POST|DELETE /hareketler/{id}/mutabik`
+- Testler: 96 test, hepsi geçiyor
+
 ### 🧪 Deneme carileri
 - **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir
 - **02.10.2026: ikisi de sıfırlandı** (kullanıcı: "deneme olarak halit ve kadir hesabını kullandık, bunları sıfırla").

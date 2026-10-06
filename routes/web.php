@@ -47,6 +47,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->names('work-orders')
         ->parameters(['atolye' => 'workOrder']);
 
+    Route::post('/hareketler/{transaction}/mutabik', [TransactionController::class, 'reconcile'])->name('transactions.reconcile');
+    Route::delete('/hareketler/{transaction}/mutabik', [TransactionController::class, 'unreconcile'])->name('transactions.unreconcile');
+
     Route::resource('hareketler', TransactionController::class)
         ->except('show')
         ->names('transactions')

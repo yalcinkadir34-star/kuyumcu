@@ -129,6 +129,28 @@ class TransactionController extends Controller
         return redirect($back)->with('success', 'Hareket silindi.');
     }
 
+    /** Cari ekstrede "MUTABIK" işareti: müşteriyle bu satıra kadar mutabık kalındı. */
+    public function reconcile(Request $request, Transaction $transaction): RedirectResponse
+    {
+        abort_unless($transaction->account_id, 404);
+
+        if (! $transaction->isReconciled()) {
+            $transaction->forceFill(['reconciled_at' => now(), 'reconciled_by' => $request->user()->id])->saveQuietly();
+        }
+
+        return back()->with('success', 'Mutabık olarak işaretlendi: '.$transaction->reconciled_at->format('d.m.Y H:i'));
+    }
+
+    /** Mutabık işaretini kaldırır (sadece yönetici). */
+    public function unreconcile(Request $request, Transaction $transaction): RedirectResponse
+    {
+        abort_unless($request->user()->isAdmin(), 403);
+
+        $transaction->forceFill(['reconciled_at' => null, 'reconciled_by' => null])->saveQuietly();
+
+        return back()->with('success', 'Mutabık işareti kaldırıldı.');
+    }
+
     /** Atölye giriş/çıkışından oluşan kayıtlar sadece atölye ekranından değiştirilebilir. */
     private function redirectIfLinked(Transaction $transaction): ?RedirectResponse
     {

@@ -18,6 +18,7 @@ class Transaction extends Model
             'amount' => 'decimal:3',
             'account_direction' => 'integer',
             'cash_direction' => 'integer',
+            'reconciled_at' => 'datetime',
         ];
     }
 
@@ -56,5 +57,16 @@ class Transaction extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** Cari ekstrede "MUTABIK" işaretini koyan kullanıcı. */
+    public function reconciler(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reconciled_by');
+    }
+
+    public function isReconciled(): bool
+    {
+        return $this->reconciled_at !== null;
     }
 }
