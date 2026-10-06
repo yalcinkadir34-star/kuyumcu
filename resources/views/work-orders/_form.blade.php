@@ -35,6 +35,16 @@
 
         <div class="sm:col-span-2">
             <label for="product" class="label">Ürün <span class="text-red-500">*</span></label>
+            {{-- Tıklayınca ürüne "14 ayar" yazılır ve milyem dolar (config/kuyumcu.php → ayar_milyem) --}}
+            <div class="mb-2 flex flex-wrap gap-2">
+                @foreach (config('kuyumcu.ayar_milyem') as $ayar => $milyem)
+                    <button type="button" data-ayar-pick="{{ $ayar }}"
+                            class="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 shadow-sm transition hover:border-gold-400 hover:bg-gold-50 data-[active]:border-gold-500 data-[active]:bg-gold-500 data-[active]:text-white">
+                        <span class="font-semibold">{{ $ayar }} ayar</span>
+                        <span class="ml-1 tabular-nums opacity-70">{{ $milyem }}</span>
+                    </button>
+                @endforeach
+            </div>
             <input id="product" name="product" data-product value="{{ old('product', $order->product) }}" required
                    class="input @error('product') input-error @enderror" placeholder="Örn: 14 ayar döküm bilezik, 25 adet">
             @error('product') <p class="field-error">{{ $message }}</p> @enderror

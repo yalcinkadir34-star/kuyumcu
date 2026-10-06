@@ -581,9 +581,16 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Teknik: yeni model `WorkOrderDeliveryLine`; `WorkOrderDelivery::saveWithLines()`, `grossOutMilli()`, `hasOutMilli()`
 - Testler: 93 test, hepsi geçiyor
 
-### ⏳ Sıradaki: atölye girişinde ürünü tıklayarak seçme
-- **Kullanıcı isteği (06.10.2026):** "Atölye girişinde ürünü yazmak yerine tıklayarak seçmek istiyorum:
+### ✅ v0.9.1: Atölye girişinde ayarı tıklayarak seçme (06.10.2026)
+- **Kullanıcı isteği:** "Atölye girişinde ürünü yazmak yerine tıklayarak seçmek istiyorum:
   8 ayar 0,333 · 10 ayar 0,417 · 14 ayar 0,585 · 18 ayar 0,750 · 22 ayar 0,916"
+- Ürün kutusunun üstünde butonlar: **8 ayar · 10 ayar · 14 ayar · 18 ayar · 22 ayar** (yanında milyemi)
+  - Tıklayınca ürüne "14 ayar" yazılır (ürün adında başka ayar varsa onun yerine, ek yazı korunur: "14 ayar bilezik")
+    ve **milyem o ayarınkiyle dolar**; seçili buton altın renginde vurgulanır, imleç gram kutusuna geçer
+  - Butonla seçim, elle yazılmış milyemin üzerine yazar (açık tercih). Milyem sonra yine elle değiştirilebilir
+  - Yazarak girmek de çalışmaya devam ediyor (v0.8.2)
+- **10 ayar → 0,417** tabloya eklendi (`config/kuyumcu.php` → `ayar_milyem`)
+- Testler: 93 test, hepsi geçiyor
 
 ### 🧪 Deneme carileri
 - **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir

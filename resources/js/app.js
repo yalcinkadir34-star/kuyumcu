@@ -82,6 +82,11 @@ if (workOrderForm) {
         const ayar = ayarOf();
         const last = lastPurities[account.value];
 
+        // Seçili ayar butonunu vurgula
+        workOrderForm.querySelectorAll('[data-ayar-pick]').forEach((button) => {
+            button.toggleAttribute('data-active', button.dataset.ayarPick === ayar);
+        });
+
         if (ayar) {
             hint.textContent = `${ayar} ayar → ${ayarMilyem[ayar]} (değiştirebilirsiniz)`;
             if (!purityTouched) purity.value = ayarMilyem[ayar];
@@ -92,6 +97,19 @@ if (workOrderForm) {
 
         update();
     };
+
+    // Ayar butonu: ürüne "14 ayar" yazar (varsa eski ayarın yerine) ve milyemi o ayarınkiyle doldurur
+    workOrderForm.querySelectorAll('[data-ayar-pick]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const label = `${button.dataset.ayarPick} ayar`;
+            const rest = product.value.replace(ayarPattern, ' ').replace(/\s+/g, ' ').trim();
+
+            product.value = rest ? `${label} ${rest}` : label;
+            purityTouched = false; // butonla seçim, elle girilen milyemin önüne geçer
+            fill();
+            gram.focus();
+        });
+    });
 
     purity.addEventListener('input', () => (purityTouched = purity.value.trim() !== ''));
     product.addEventListener('input', fill);

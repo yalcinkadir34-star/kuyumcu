@@ -420,8 +420,9 @@ class AtolyeTest extends TestCase
         // Ürüne "14 ayar" yazınca milyemi dolduran tablo sayfaya aktarılır (doldurma tarayıcıda yapılır)
         $this->actingAs($this->user)->get(route('work-orders.create'))
             ->assertOk()
-            ->assertSee('data-ayar-milyem=\'{"8":"0,333","14":"0,585","18":"0,750","22":"0,916"}\'', false)
-            ->assertSee('data-product', false);
+            ->assertSee('data-ayar-milyem=\'{"8":"0,333","10":"0,417","14":"0,585","18":"0,750","22":"0,916"}\'', false)
+            ->assertSee('data-product', false)
+            ->assertSeeInOrder(['8 ayar', '10 ayar', '0,417', '14 ayar', '18 ayar', '22 ayar']);
     }
 
     public function test_atolye_girisinden_hizli_cari_eklenir(): void
