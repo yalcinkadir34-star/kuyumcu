@@ -6,6 +6,7 @@ use App\Http\Requests\WorkshopDeliveryRequest;
 use App\Models\Account;
 use App\Models\Currency;
 use App\Models\WorkOrderDelivery;
+use App\Models\WorkOrderDeliveryLine;
 use App\Support\Amount;
 use App\Support\Balances;
 use App\Support\Workshop;
@@ -31,13 +32,13 @@ class WorkshopDeliveryController extends Controller
         ]);
 
         $deliveries = WorkOrderDelivery::query()
-            ->with('account')
+            ->with(['account', 'lines'])
             ->when($filters['cari'] ?? null, fn ($q, $id) => $q->where('account_id', $id))
             ->when($filters['baslangic'] ?? null, fn ($q, $d) => $q->where('delivered_at', '>=', $d))
             ->when($filters['bitis'] ?? null, fn ($q, $d) => $q->where('delivered_at', '<', Carbon::parse($d)->addDay()->toDateString()))
             ->when($filters['q'] ?? null, function ($q, $term) {
                 $q->where(fn ($q) => $q->where('number', 'like', "%{$term}%")
-                    ->orWhere('product', 'like', "%{$term}%")
+                    ->orWhereHas('lines', fn ($l) => $l->where('product', 'like', "%{$term}%"))
                     ->orWhereHas('account', fn ($a) => $a->where('name', 'like', "%{$term}%")));
             })
             ->orderByDesc('delivered_at')
@@ -65,9 +66,13 @@ class WorkshopDeliveryController extends Controller
         $gr = new Currency(['symbol' => 'gr', 'decimals' => 3]);
 
         // Formda müşteri seçilince gösterilecek bilgiler: atölyede kalan gram ve son çıkış milyemi
-        $lastPurities = WorkOrderDelivery::query()
-            ->whereIn('id', WorkOrderDelivery::query()->selectRaw('MAX(id)')->groupBy('account_id'))
-            ->pluck('purity_out', 'account_id');
+        $lastPurities = WorkOrderDeliveryLine::query()
+            ->join('work_order_deliveries as d', 'd.id', '=', 'work_order_delivery_lines.work_order_delivery_id')
+            ->whereIn('work_order_delivery_lines.id', WorkOrderDeliveryLine::query()
+                ->join('work_order_deliveries as d2', 'd2.id', '=', 'work_order_delivery_lines.work_order_delivery_id')
+                ->selectRaw('MAX(work_order_delivery_lines.id)')
+                ->groupBy('d2.account_id'))
+            ->pluck('work_order_delivery_lines.purity_out', 'd.account_id');
 
         $info = $accounts->mapWithKeys(function (Account $a) use ($totals, $gr, $lastPurities) {
             $ramat = max($totals[$a->id]['ramat_gram'] ?? 0, 0);
@@ -89,14 +94,15 @@ class WorkshopDeliveryController extends Controller
     public function store(WorkshopDeliveryRequest $request): RedirectResponse
     {
         $delivery = new WorkOrderDelivery($request->deliveryData());
-        $delivery->saveWithTransactions($request->user()->id);
+        $delivery->saveWithLines($request->linesData(), $request->user()->id);
 
         $gr = new Currency(['symbol' => 'gr', 'decimals' => 3]);
         $kalan = WorkshopTotals::forAccount($delivery->account_id)['ramat_gram'];
+        $count = $delivery->lines->count();
 
-        $message = "{$delivery->number} çıkışı kaydedildi: ".Amount::format($delivery->gross_out, $gr)
-            .' × '.Workshop::formatPurity($delivery->purity_out)
-            .' = '.Amount::format($delivery->has_out, $gr).' has müşterinin carisine borç yazıldı.'
+        $message = "{$delivery->number} çıkışı kaydedildi ({$count} satır): toplam "
+            .Amount::formatMilli($delivery->grossOutMilli(), $gr).', '
+            .Amount::formatMilli($delivery->hasOutMilli(), $gr).' has müşterinin carisine borç yazıldı.'
             .($delivery->isSale() ? ' (Satış: ramatı etkilemez.)' : ' Müşterinin atölyede kalanı: '.Amount::formatMilli($kalan, $gr).'.');
 
         return redirect()->route('workshop-deliveries.index')
@@ -117,11 +123,12 @@ class WorkshopDeliveryController extends Controller
     /** Müşteriye verilen bilgi fişi (yazdırılabilir). ?boyut=80 → 80 mm fiş yazıcısı */
     public function receipt(Request $request, WorkOrderDelivery $delivery): View
     {
-        $delivery->load('account');
+        $delivery->load(['account', 'lines']);
 
-        // Müşterinin bu çıkıştan hemen sonraki bakiyesi (fiş sonradan yazdırılsa da değişmez)
-        $balances = $delivery->out_transaction_id
-            ? Balances::forAccountUntil($delivery->account_id, $delivery->delivered_at->format('Y-m-d H:i:s'), $delivery->out_transaction_id)
+        // Müşterinin bu çıkıştan (son satırından) hemen sonraki bakiyesi; fiş sonradan yazdırılsa da değişmez
+        $lastTransactionId = $delivery->lines->max('out_transaction_id');
+        $balances = $lastTransactionId
+            ? Balances::forAccountUntil($delivery->account_id, $delivery->delivered_at->format('Y-m-d H:i:s'), $lastTransactionId)
             : $delivery->account->balances();
 
         return view('workshop-deliveries.receipt', [

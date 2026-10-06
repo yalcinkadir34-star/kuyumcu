@@ -9,7 +9,7 @@ use App\Models\CashRegister;
 use App\Models\Currency;
 use App\Models\Transaction;
 use App\Models\WorkOrder;
-use App\Models\WorkOrderDelivery;
+use App\Models\WorkOrderDeliveryLine;
 use App\Support\Amount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -137,7 +137,7 @@ class TransactionController extends Controller
                 ->with('error', "Bu kayıt {$order->number} atölye girişinden otomatik oluşturuldu. Değişikliği giriş fişi üzerinden yapın.");
         }
 
-        if ($delivery = WorkOrderDelivery::firstWhere('out_transaction_id', $transaction->id)) {
+        if ($delivery = WorkOrderDeliveryLine::firstWhere('out_transaction_id', $transaction->id)?->delivery) {
             return redirect()->route('workshop-deliveries.index', ['q' => $delivery->number])
                 ->with('error', "Bu kayıt {$delivery->number} atölye çıkışından otomatik oluşturuldu. Değiştirmek için çıkışı silip yeniden girin.");
         }

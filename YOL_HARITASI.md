@@ -563,6 +563,28 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Tablo: `config/kuyumcu.php` → `ayar_milyem` (yeni ayar eklemek/değiştirmek için)
 - Testler: 91 test, hepsi geçiyor
 
+### ✅ v0.9: Tek çıkışta birden fazla satır (06.10.2026)
+- **Kullanıcı isteği:** "Atölye çıkışında bir müşteriye birden fazla milyem türünde işlem yapıyoruz (0,585, 0,750, 0,333)
+  veya iki ayrı 0,585 (işçilik farklı). Bunu tek işlemde yapmak istiyorum. Fişte de ayrı işlemler görünsün."
+- **Yeni yapı:** `work_order_deliveries` = çıkış başlığı (no, müşteri, tür, tarih, not);
+  **`work_order_delivery_lines`** = satırlar (ürün, gram, çıkış milyemi, has, cari kaydı)
+  - Her satır müşterinin carisine **ayrı borç kaydı** (aynı T numarasıyla). Cari ekstrede satır satır görünür
+  - Çıkış silinince tüm satırların cari kayıtları silinir
+- **Çıkış formu:** satır tablosu (ürün, gram, milyem, satırın has'ı), **"+ Satır ekle"**, satır silme;
+  yeni satıra önceki satırın milyemi gelir; altta toplam gram, toplam has, atölyede kalacak
+  - Tamamen boş satırlar yok sayılır. Atölye çıkışında **satırların toplamı** müşterinin kalanını aşamaz
+- **Müşteri fişi:** "ÇIKAN ÜRÜNLER" tablosu (ürün, gram, milyem, has) + toplam satırı; son durum en son satırdan sonraki bakiye
+- Çıkışlar listesi: toplam gram, satır sayısı (üzerine gelince milyemler), toplam has, ürün adları
+- Ramat detayı ve müşteri raporu satır satır gösterir
+- **Veri dönüşümü** (migration `2026_10_06_000001`): mevcut 45 çıkış (LUCİS 44, mustafa 1) tek satırlı çıkışa taşındı.
+  Bakiyeler ve çıkış toplamları birebir aynı (önce/sonra kontrol). Yedek: `storage/app/yedek/kuyumcu-2026-10-06-cok-satirli-cikis-oncesi.sql`
+- Teknik: yeni model `WorkOrderDeliveryLine`; `WorkOrderDelivery::saveWithLines()`, `grossOutMilli()`, `hasOutMilli()`
+- Testler: 93 test, hepsi geçiyor
+
+### ⏳ Sıradaki: atölye girişinde ürünü tıklayarak seçme
+- **Kullanıcı isteği (06.10.2026):** "Atölye girişinde ürünü yazmak yerine tıklayarak seçmek istiyorum:
+  8 ayar 0,333 · 10 ayar 0,417 · 14 ayar 0,585 · 18 ayar 0,750 · 22 ayar 0,916"
+
 ### 🧪 Deneme carileri
 - **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir
 - **02.10.2026: ikisi de sıfırlandı** (kullanıcı: "deneme olarak halit ve kadir hesabını kullandık, bunları sıfırla").

@@ -64,16 +64,17 @@ class RamatController extends Controller
             ]);
 
         // Satış çıkışları ramatı etkilemediği için burada gösterilmez
-        $out = WorkOrderDelivery::query()->where('account_id', $account->id)
+        // Her çıkış satırı ayrı gösterilir
+        $out = WorkOrderDelivery::query()->with('lines')->where('account_id', $account->id)
             ->where('kind', WorkOrderDelivery::KIND_ATOLYE)
             ->when($from, fn ($q) => $q->where('delivered_at', '>=', $from))
             ->when($until, fn ($q) => $q->where('delivered_at', '<', $until))
             ->get()
-            ->map(fn (WorkOrderDelivery $d) => (object) [
-                'date' => $d->delivered_at, 'type' => 'cikis', 'number' => $d->number, 'product' => $d->product,
-                'gram' => $d->gross_out, 'purity' => $d->purity_out, 'has' => $d->has_out,
-                'url' => route('workshop-deliveries.receipt', $d), 'sort' => 'b'.$d->id,
-            ]);
+            ->flatMap(fn (WorkOrderDelivery $d) => $d->lines->map(fn ($line) => (object) [
+                'date' => $d->delivered_at, 'type' => 'cikis', 'number' => $d->number, 'product' => $line->product,
+                'gram' => $line->gross_out, 'purity' => $line->purity_out, 'has' => $line->has_out,
+                'url' => route('workshop-deliveries.receipt', $d), 'sort' => 'b'.str_pad((string) $line->id, 10, '0', STR_PAD_LEFT),
+            ]));
 
         return $in->concat($out)->sortBy([['date', 'asc'], ['sort', 'asc']])->values();
     }

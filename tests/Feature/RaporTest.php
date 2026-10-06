@@ -43,8 +43,7 @@ class RaporTest extends TestCase
         $this->actingAs($this->user)->post(route('workshop-deliveries.store'), [
             'account_id' => $order->account_id,
             'delivered_at' => $tarih,
-            'gross_out' => $gram,
-            'purity_out' => $milyem,
+            'lines' => [['gross_out' => $gram, 'purity_out' => $milyem]],
             'kind' => 'atolye',
         ])->assertSessionHasNoErrors();
     }

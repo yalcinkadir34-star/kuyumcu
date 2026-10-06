@@ -6,7 +6,7 @@ use App\Models\Account;
 use App\Models\Currency;
 use App\Models\Transaction;
 use App\Models\WorkOrder;
-use App\Models\WorkOrderDelivery;
+use App\Models\WorkOrderDeliveryLine;
 use App\Support\Amount;
 use App\Support\Ledger;
 use Illuminate\Http\Request;
@@ -85,7 +85,7 @@ class ReportController extends Controller
     {
         $ids = $rows->pluck('id');
         $entries = WorkOrder::query()->whereIn('in_transaction_id', $ids)->get()->keyBy('in_transaction_id');
-        $exits = WorkOrderDelivery::query()->whereIn('out_transaction_id', $ids)->get()->keyBy('out_transaction_id');
+        $exits = WorkOrderDeliveryLine::query()->with('delivery')->whereIn('out_transaction_id', $ids)->get()->keyBy('out_transaction_id');
 
         return $rows->map(function (Transaction $row) use ($entries, $exits) {
             // Yön: -1 = müşteri bize has verdi (giriş), +1 = müşteriye has verildi (çıkış)
@@ -99,11 +99,11 @@ class ReportController extends Controller
                 $row->purity = $order->purity;
                 $row->label = 'Atölye girişi · '.$order->product;
                 $row->document_no = $order->number;
-            } elseif ($delivery = $exits->get($row->id)) {
-                $row->gram_milli = Amount::toMilli($delivery->gross_out);
-                $row->purity = $delivery->purity_out;
-                $row->label = ($delivery->isSale() ? 'Satış' : 'Teslim').($delivery->product ? ' · '.$delivery->product : '');
-                $row->document_no = $delivery->number;
+            } elseif ($line = $exits->get($row->id)) {
+                $row->gram_milli = Amount::toMilli($line->gross_out);
+                $row->purity = $line->purity_out;
+                $row->label = ($line->delivery->isSale() ? 'Satış' : 'Teslim').($line->product ? ' · '.$line->product : '');
+                $row->document_no = $line->delivery->number;
             }
 
             return $row;

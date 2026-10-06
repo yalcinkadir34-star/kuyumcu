@@ -9,6 +9,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderDelivery;
+use App\Models\WorkOrderDeliveryLine;
 use App\Support\Balances;
 use App\Support\WorkshopTotals;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -43,15 +44,30 @@ class AtolyeTest extends TestCase
         return WorkOrder::latest('id')->first();
     }
 
+    /**
+     * Çıkış gönderir. Tek satırlık çıkış için gross_out / purity_out / product düz verilebilir;
+     * çok satırlı için 'lines' verilir.
+     */
     private function cikis(array $data = [])
     {
+        $line = [
+            'product' => $data['product'] ?? null,
+            'gross_out' => $data['gross_out'] ?? '160',
+            'purity_out' => $data['purity_out'] ?? '0,585',
+        ];
+        unset($data['product'], $data['gross_out'], $data['purity_out']);
+
         return $this->actingAs($this->user)->post(route('workshop-deliveries.store'), $data + [
             'account_id' => $this->firma->id,
             'delivered_at' => '2026-09-10T10:00:00',
-            'gross_out' => '160',
-            'purity_out' => '0,585',
             'kind' => 'atolye',
+            'lines' => [$line],
         ]);
+    }
+
+    private function satir(int $index = 0): WorkOrderDeliveryLine
+    {
+        return WorkOrderDeliveryLine::orderBy('id')->skip($index)->firstOrFail();
     }
 
     private function hasBakiye(?Account $account = null): int
@@ -76,7 +92,7 @@ class AtolyeTest extends TestCase
 
         // Çıkış: 6,97 gr × 0,625 (işçilik dahil) = 4,356 has
         $this->cikis(['gross_out' => '6,97', 'purity_out' => '0,625'])->assertSessionHasNoErrors();
-        $this->assertSame('4.356', WorkOrderDelivery::first()->has_out);
+        $this->assertSame('4.356', $this->satir()->has_out);
 
         // Has borcumuz: 46,43 + 15,618 − 4,356 = 57,692
         $this->assertSame(-57_692, $this->hasBakiye());
@@ -101,7 +117,7 @@ class AtolyeTest extends TestCase
         $delivery = WorkOrderDelivery::first();
         $this->assertSame('T00001', $delivery->number);
         $this->assertSame($this->firma->id, $delivery->account_id);
-        $this->assertSame('15.625', $delivery->has_out);
+        $this->assertSame('15.625', $this->satir()->has_out);
 
         $totals = WorkshopTotals::forAccount($this->firma->id);
         $this->assertSame(25_000, $totals['ramat_gram']);
@@ -125,12 +141,12 @@ class AtolyeTest extends TestCase
         $this->giris(['gross_in' => '50']);
         $this->cikis(['gross_out' => '40']);
 
-        $this->cikis(['gross_out' => '11'])->assertSessionHasErrors('gross_out');
+        $this->cikis(['gross_out' => '11'])->assertSessionHasErrors('lines');
         $this->assertSame(1, WorkOrderDelivery::count());
 
         // Başka müşterinin girişi bu müşterinin kalanına sayılmaz
         $baska = Account::factory()->create();
-        $this->cikis(['account_id' => $baska->id, 'gross_out' => '1'])->assertSessionHasErrors('gross_out');
+        $this->cikis(['account_id' => $baska->id, 'gross_out' => '1'])->assertSessionHasErrors('lines');
     }
 
     public function test_atolyede_girisi_olmayan_musteriye_satis_cikisi_yapilir(): void
@@ -153,7 +169,7 @@ class AtolyeTest extends TestCase
 
         $delivery = WorkOrderDelivery::first();
         $this->assertTrue($delivery->isSale());
-        $this->assertSame('18.750', $delivery->has_out); // 30 × 0,625
+        $this->assertSame('18.750', $this->satir()->has_out); // 30 × 0,625
 
         // Cari: 20 alacak − 18,75 = 1,25 has borcumuz kaldı
         $this->assertSame(-1_250, $this->hasBakiye($musteri));
@@ -168,11 +184,60 @@ class AtolyeTest extends TestCase
         $this->giris(['gross_in' => '50']);
 
         // Atölye ürünü: 50'den fazlası çıkamaz; satış ise sınırsız ve ramatı değiştirmez
-        $this->cikis(['kind' => 'atolye', 'gross_out' => '60'])->assertSessionHasErrors('gross_out');
+        $this->cikis(['kind' => 'atolye', 'gross_out' => '60'])->assertSessionHasErrors('lines');
         $this->cikis(['kind' => 'satis', 'gross_out' => '60'])->assertSessionHasNoErrors();
 
         $this->assertSame(50_000, WorkshopTotals::forAccount($this->firma->id)['ramat_gram']);
         $this->actingAs($this->user)->get(route('workshop-deliveries.index'))->assertSee('Satış');
+    }
+
+    public function test_tek_cikista_birden_fazla_satir_farkli_milyemle(): void
+    {
+        // Kullanıcının isteği: aynı müşteriye tek işlemde 0,585 / 0,750 / 0,333 ve iki ayrı 0,585 (farklı işçilik)
+        $this->giris(['gross_in' => '200']);
+
+        $this->cikis(['lines' => [
+            ['product' => '14 ayar zincir', 'gross_out' => '10', 'purity_out' => '0,585'],
+            ['product' => '14 ayar bilezik', 'gross_out' => '5', 'purity_out' => '0,625'],
+            ['product' => '18 ayar yüzük', 'gross_out' => '4', 'purity_out' => '0,750'],
+            ['product' => '8 ayar küpe', 'gross_out' => '3', 'purity_out' => '0,333'],
+            ['product' => '', 'gross_out' => '', 'purity_out' => ''], // boş satır yok sayılır
+        ]])->assertSessionHasNoErrors();
+
+        $delivery = WorkOrderDelivery::with('lines')->first();
+        $this->assertSame('T00001', $delivery->number);
+        $this->assertCount(4, $delivery->lines);
+        $this->assertSame(22_000, $delivery->grossOutMilli());
+        // 5,85 + 3,125 + 3 + 0,999 = 12,974
+        $this->assertSame(12_974, $delivery->hasOutMilli());
+
+        // Her satır ayrı cari kaydı, aynı çıkış numarasıyla
+        $this->assertSame(4, Transaction::where('document_no', 'T00001')->count());
+        $this->assertSame(-117_000 + 12_974, $this->hasBakiye());
+        $this->assertSame(178_000, WorkshopTotals::forAccount($this->firma->id)['ramat_gram']);
+
+        // Fişte satırlar ayrı ayrı ve toplam
+        $this->actingAs($this->user)->get(route('workshop-deliveries.receipt', $delivery))
+            ->assertOk()
+            ->assertSeeInOrder(['14 ayar zincir', '10,000', '0,585', '5,850', '14 ayar bilezik', '0,625', '3,125', '18 ayar yüzük', '0,750', '8 ayar küpe', '0,333', '0,999', 'Toplam', '22,000', '12,974 gr']);
+
+        // Çıkış silinince tüm satırların cari kayıtları geri alınır
+        $this->actingAs($this->user)->delete(route('workshop-deliveries.destroy', $delivery));
+        $this->assertSame(0, Transaction::where('document_no', 'T00001')->count());
+        $this->assertSame(0, WorkOrderDeliveryLine::count());
+    }
+
+    public function test_cok_satirli_cikista_toplam_kalani_asamaz(): void
+    {
+        $this->giris(['gross_in' => '20']);
+
+        $this->cikis(['lines' => [
+            ['gross_out' => '12', 'purity_out' => '0,585'],
+            ['gross_out' => '9', 'purity_out' => '0,585'],
+        ]])->assertSessionHasErrors('lines');
+
+        $this->cikis(['lines' => []])->assertSessionHasErrors('lines');
+        $this->assertSame(0, WorkOrderDelivery::count());
     }
 
     public function test_cikis_turu_zorunlu(): void
@@ -187,13 +252,13 @@ class AtolyeTest extends TestCase
     {
         $this->giris();
 
-        $this->cikis(['purity_out' => ''])->assertSessionHasErrors('purity_out');
-        $this->cikis(['purity_out' => 'abc'])->assertSessionHasErrors('purity_out');
-        $this->cikis(['purity_out' => '1,5'])->assertSessionHasErrors('purity_out');
+        $this->cikis(['purity_out' => ''])->assertSessionHasErrors('lines.0.purity_out');
+        $this->cikis(['purity_out' => 'abc'])->assertSessionHasErrors('lines.0.purity_out');
+        $this->cikis(['purity_out' => '1,5'])->assertSessionHasErrors('lines.0.purity_out');
 
         // Binde yazım kabul edilir: 625 → 0,625
         $this->cikis(['purity_out' => '625'])->assertSessionHasNoErrors();
-        $this->assertSame('0.6250', WorkOrderDelivery::first()->purity_out);
+        $this->assertSame('0.6250', $this->satir()->purity_out);
     }
 
     public function test_cikis_silinince_cari_kaydi_geri_alinir(): void
@@ -334,10 +399,10 @@ class AtolyeTest extends TestCase
             ->assertSee('T00001')
             ->assertSee('Döküm Firması')
             ->assertSee('14 ayar zincir')
-            ->assertSee('6,970 gr')
+            ->assertSee('6,970')
             ->assertSee('0,625')
-            ->assertSee('4,356 gr')
-            ->assertDontSee('26,250 gr')
+            ->assertSee('4,356 gr') // toplam has
+            ->assertDontSee('26,250')
             // Son durum: 15,618 − 4,356 = 11,262 (ikinci çıkış sonradan yapıldı ama bu fişi etkilemez)
             ->assertSeeInOrder(['SON DURUM', 'Alacağınız (Has)', '11,262 gr'])
             ->assertSee('Bu fiş bilgi amaçlıdır.');

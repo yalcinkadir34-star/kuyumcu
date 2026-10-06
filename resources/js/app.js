@@ -174,36 +174,101 @@ document.querySelectorAll('[data-quick-account]').forEach((box) => {
     );
 });
 
-// Atölyeden çıkış formu: müşteri seçilince kalan gram ve son çıkış milyemi; has ve kalacak önizlemesi
+// Atölyeden çıkış formu (çok satırlı): satır ekle/sil, satır ve toplam has önizlemesi,
+// müşteri seçilince kalan gram, son çıkış milyemi ve çıkış türü önerisi
 const deliveryForm = document.querySelector('[data-delivery-form]');
 
 if (deliveryForm) {
     const info = JSON.parse(deliveryForm.dataset.info || '{}');
     const account = deliveryForm.querySelector('[data-delivery-account]');
-    const out = deliveryForm.querySelector('[data-gross-out]');
-    const purityOut = deliveryForm.querySelector('[data-purity-out]');
+    const linesBody = deliveryForm.querySelector('[data-lines]');
     const remainingText = deliveryForm.querySelector('[data-delivery-remaining]');
     const kinds = deliveryForm.querySelectorAll('[data-delivery-kind]');
     const set = (selector, text) => (deliveryForm.querySelector(selector).textContent = text);
     const kind = () => deliveryForm.querySelector('[data-delivery-kind]:checked')?.value ?? 'atolye';
+    const rows = () => [...linesBody.querySelectorAll('[data-line]')];
+    const field = (row, name) => row.querySelector(`[data-field="${name}"]`);
+
+    // Satır numaraları ve form alan adları: lines[0][gross_out], lines[1][gross_out] ...
+    const renumber = () => {
+        rows().forEach((row, i) => {
+            row.querySelector('[data-line-no]').textContent = i + 1;
+            row.querySelectorAll('[data-field]').forEach((input) => (input.name = `lines[${i}][${input.dataset.field}]`));
+        });
+    };
 
     const update = () => {
+        let totalGram = 0;
+        let totalHas = 0;
+
+        rows().forEach((row) => {
+            const gram = parseNumber(field(row, 'gross_out').value);
+            const purity = parsePurity(field(row, 'purity_out').value);
+            const has = gram > 0 && purity > 0 ? hasOf(gram, purity) : NaN;
+
+            row.querySelector('[data-line-has]').textContent = Number.isFinite(has) ? formatNumber(has) : '—';
+            if (gram > 0) totalGram += gram;
+            if (Number.isFinite(has)) totalHas += has;
+        });
+
         const selected = info[account.value];
         const remaining = selected ? Number(selected.kalanSayi) : NaN;
-        const gramOut = parseNumber(out.value);
-        const total = parsePurity(purityOut.value);
 
-        set('[data-preview-has]', gramOut > 0 && total > 0 ? formatNumber(hasOf(gramOut, total)) : '—');
-        set('[data-preview-remaining]', Number.isFinite(remaining) ? formatNumber(gramOut > 0 ? remaining - gramOut : remaining) : '—');
+        set('[data-total-gram]', totalGram > 0 ? formatNumber(totalGram) : '—');
+        set('[data-preview-has]', totalHas > 0 ? formatNumber(totalHas) : '—');
+        set('[data-preview-remaining]', Number.isFinite(remaining) ? formatNumber(remaining - totalGram) : '—');
 
         // Satışta ramat değişmez: "kalacak" kutusu gizlenir
         deliveryForm.querySelector('[data-preview-remaining-box]').classList.toggle('invisible', kind() !== 'atolye');
     };
 
+    const addRow = () => {
+        const last = rows().at(-1);
+        const row = last.cloneNode(true);
+
+        row.querySelectorAll('[data-field]').forEach((input) => {
+            input.value = '';
+            input.classList.remove('input-error');
+        });
+        row.querySelectorAll('.field-error').forEach((error) => error.remove());
+
+        // Milyem: önceki satırınki (aynı işçilik sık kullanılır), yoksa müşterinin son milyemi
+        field(row, 'purity_out').value = field(last, 'purity_out').value || info[account.value]?.sonMilyem || '';
+
+        linesBody.appendChild(row);
+        renumber();
+        update();
+        field(row, 'product').focus();
+    };
+
+    linesBody.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-line-remove]');
+        if (!button) return;
+
+        const row = button.closest('[data-line]');
+
+        if (rows().length === 1) {
+            row.querySelectorAll('[data-field]').forEach((input) => (input.value = ''));
+        } else {
+            row.remove();
+        }
+
+        renumber();
+        update();
+    });
+
+    deliveryForm.querySelector('[data-line-add]').addEventListener('click', addRow);
+
     const onAccount = (event) => {
         const selected = info[account.value];
         remainingText.textContent = selected ? `Atölyede kalan ürünü: ${selected.kalan}` : '';
-        if (selected?.sonMilyem && purityOut.value === '') purityOut.value = selected.sonMilyem;
+
+        // Boş milyem kutularına müşterinin son çıkış milyemi
+        if (selected?.sonMilyem) {
+            rows().forEach((row) => {
+                if (field(row, 'purity_out').value === '') field(row, 'purity_out').value = selected.sonMilyem;
+            });
+        }
 
         // Müşteri değiştirilince türü öner: atölyede ürünü yoksa satış
         if (event && selected) {
@@ -215,6 +280,7 @@ if (deliveryForm) {
     };
 
     deliveryForm.addEventListener('input', update);
+    deliveryForm.addEventListener('change', update);
     account.addEventListener('change', onAccount);
     onAccount();
 }

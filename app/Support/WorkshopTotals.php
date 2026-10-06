@@ -33,13 +33,15 @@ class WorkshopTotals
             ->get()->keyBy('account_id');
 
         // Sadece atölyedeki üründen yapılan çıkışlar ramatı etkiler (satış çıkışları hariç)
-        $out = DB::table('work_order_deliveries')
-            ->where('kind', 'atolye')
-            ->when($accountIds !== null, fn ($q) => $q->whereIn('account_id', $accountIds))
-            ->when($from, fn ($q) => $q->where('delivered_at', '>=', $from))
-            ->when($until, fn ($q) => $q->where('delivered_at', '<', $until))
-            ->groupBy('account_id')
-            ->selectRaw('account_id, COUNT(*) as adet, SUM(gross_out) as gram, SUM(has_out) as has')
+        // Gram ve has satırlardan toplanır; adet = çıkış (başlık) sayısı
+        $out = DB::table('work_order_deliveries as d')
+            ->join('work_order_delivery_lines as l', 'l.work_order_delivery_id', '=', 'd.id')
+            ->where('d.kind', 'atolye')
+            ->when($accountIds !== null, fn ($q) => $q->whereIn('d.account_id', $accountIds))
+            ->when($from, fn ($q) => $q->where('d.delivered_at', '>=', $from))
+            ->when($until, fn ($q) => $q->where('d.delivered_at', '<', $until))
+            ->groupBy('d.account_id')
+            ->selectRaw('d.account_id as account_id, COUNT(DISTINCT d.id) as adet, SUM(l.gross_out) as gram, SUM(l.has_out) as has')
             ->get()->keyBy('account_id');
 
         $result = [];

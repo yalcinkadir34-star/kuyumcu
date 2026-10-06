@@ -58,22 +58,39 @@
             <div class="flex justify-between gap-2"><dt class="text-stone-500">Fiş No</dt><dd class="font-mono font-semibold">{{ $no }}</dd></div>
             <div class="flex justify-between gap-2"><dt class="text-stone-500">Tarih</dt><dd>{{ $delivery->delivered_at->format('d.m.Y H:i') }}</dd></div>
             <div class="flex justify-between gap-2"><dt class="text-stone-500">Müşteri</dt><dd class="text-right font-semibold">{{ $delivery->account->name }}</dd></div>
-            @if ($delivery->product)<div class="flex justify-between gap-2"><dt class="text-stone-500">Ürün</dt><dd class="text-right">{{ $delivery->product }}</dd></div>@endif
         </dl>
 
-        {{-- Çıkan ürün --}}
+        {{-- Çıkan ürünler: her satır ayrı --}}
         <div class="mt-3 border-t border-dashed border-stone-400 pt-2">
-            <div class="font-semibold">ÇIKAN ÜRÜN</div>
-            <dl class="mt-1 space-y-0.5">
-                <div class="flex justify-between"><dt>Gram</dt><dd class="tabular-nums">{{ Amount::format($delivery->gross_out, $gr) }}</dd></div>
-                <div class="flex justify-between">
-                    <dt>Milyem</dt>
-                    <dd class="tabular-nums">{{ $p($delivery->purity_out) }}</dd>
-                </div>
-                <div @class(['flex justify-between border-y border-stone-900 py-1 font-bold', 'text-base' => ! $small, 'text-xs' => $small])>
-                    <dt>Has</dt><dd class="tabular-nums">{{ Amount::format($delivery->has_out, $gr) }}</dd>
-                </div>
-            </dl>
+            <div class="font-semibold">ÇIKAN ÜRÜNLER</div>
+            <table class="mt-1 w-full border-collapse">
+                <thead>
+                    <tr class="border-b border-stone-400 text-left text-stone-600">
+                        <th class="py-0.5 pr-1 font-normal">Ürün</th>
+                        <th class="py-0.5 pr-1 text-right font-normal">Gram</th>
+                        <th class="py-0.5 pr-1 text-right font-normal">Milyem</th>
+                        <th class="py-0.5 text-right font-normal">Has</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($delivery->lines as $line)
+                        <tr class="border-b border-dotted border-stone-300 align-top">
+                            <td class="py-0.5 pr-1">{{ $line->product ?: $loop->iteration.'.' }}</td>
+                            <td class="py-0.5 pr-1 text-right whitespace-nowrap tabular-nums">{{ Amount::format($line->gross_out, $gr, false) }}</td>
+                            <td class="py-0.5 pr-1 text-right tabular-nums">{{ $p($line->purity_out) }}</td>
+                            <td class="py-0.5 text-right whitespace-nowrap tabular-nums">{{ Amount::format($line->has_out, $gr, false) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    <tr @class(['border-y-2 border-stone-900 font-bold', 'text-base' => ! $small, 'text-xs' => $small])>
+                        <td class="py-1 pr-1">Toplam</td>
+                        <td class="py-1 pr-1 text-right whitespace-nowrap tabular-nums">{{ Amount::formatMilli($delivery->grossOutMilli(), $gr, false) }}</td>
+                        <td class="py-1 pr-1"></td>
+                        <td class="py-1 text-right whitespace-nowrap tabular-nums">{{ Amount::formatMilli($delivery->hasOutMilli(), $gr) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
 
         {{-- Son durum: bu çıkıştan sonraki bakiye --}}
