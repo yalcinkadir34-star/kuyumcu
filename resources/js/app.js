@@ -28,6 +28,27 @@ document.addEventListener('submit', (event) => {
     }
 });
 
+// <a data-print-receipt href="…/fis">: fişi yeni sekme açmadan, gizli bir çerçevede yükleyip yazdırır.
+// Chrome "--kiosk-printing" ile açıldıysa önizleme çıkmaz, doğrudan varsayılan yazıcıya (fiş yazıcısı) basar.
+document.addEventListener('click', (event) => {
+    const link = event.target.closest('[data-print-receipt]');
+    if (!link || event.ctrlKey || event.metaKey || event.shiftKey) return;
+
+    event.preventDefault();
+    document.getElementById('receipt-print-frame')?.remove();
+
+    const frame = document.createElement('iframe');
+    frame.id = 'receipt-print-frame';
+    frame.setAttribute('aria-hidden', 'true');
+    frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+    frame.addEventListener('load', () => {
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+    }, { once: true });
+    frame.src = link.href;
+    document.body.append(frame);
+});
+
 // Atölye girişi/çıkışı kaydedilince sesli uyarı (<div data-sound="giris|cikis">, components/flash).
 // Ses dosyası yok, tarayıcıda üretilir. Giriş: yükselen iki nota · Çıkış: alçalan iki nota
 const SOUNDS = {

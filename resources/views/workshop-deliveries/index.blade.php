@@ -14,7 +14,7 @@
                 <span class="font-semibold">Müşteri fişi hazır.</span>
                 {{ $justDelivered->number }} · {{ $justDelivered->account->name }} · {{ Amount::formatMilli($justDelivered->grossOutMilli(), $gr) }} ({{ $justDelivered->lines->count() }} satır)
             </div>
-            <a href="{{ route('workshop-deliveries.receipt', $justDelivered) }}" target="_blank" class="btn btn-gold">
+            <a href="{{ route('workshop-deliveries.receipt', $justDelivered) }}" data-print-receipt class="btn btn-gold">
                 <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
                 Fişi Yazdır
             </a>
@@ -70,7 +70,7 @@
                             <td class="text-right tabular-nums text-stone-600" title="{{ $delivery->lines->map(fn ($l) => Workshop::formatPurity($l->purity_out))->join(', ') }}">{{ $delivery->lines->count() }}</td>
                             <td class="text-right font-medium tabular-nums whitespace-nowrap text-gold-800">{{ Amount::formatMilli($delivery->hasOutMilli(), $gr, false) }}</td>
                             <td class="text-right whitespace-nowrap">
-                                <a href="{{ route('workshop-deliveries.receipt', $delivery) }}" target="_blank"
+                                <a href="{{ route('workshop-deliveries.receipt', $delivery) }}" data-print-receipt
                                    class="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium text-stone-500 hover:bg-gold-50 hover:text-gold-800" title="Müşteri fişini yazdır">
                                     <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
                                     Fiş

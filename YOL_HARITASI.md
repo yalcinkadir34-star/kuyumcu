@@ -634,6 +634,17 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
   - Tarayıcı sesi engellerse sayfadaki ilk tıklamada çalar. Bilgisayarın sesi açık olmalı
 - Testler: 99 test, hepsi geçiyor
 
+### ✅ v0.9.5: Fiş doğrudan fiş yazıcısından çıkar (09.10.2026)
+- **Kullanıcı isteği:** "Yazdır'a basınca başka ekrana yönlendiriyor, buna gerek yok, direkt fiş yazıcıdan çıksın"
+- Çıkışlar listesindeki **Fiş** ve **Fişi Yazdır** butonları artık yeni sekme açmıyor: fiş gizli bir çerçevede yüklenip
+  aynı sayfadan yazdırılıyor (`data-print-receipt`, `resources/js/app.js`). Ctrl+tık ile fiş sayfası yine açılabilir
+- Chrome'un yazdırma önizlemesi web sayfasından kapatılamaz. Bunun için **masaüstü kısayolu "Kuyumcu Atölye"**:
+  Chrome'u ayrı profille (`%LOCALAPPDATA%\KuyumcuAtolye\Chrome`), `--kiosk-printing` ve `--app=http://localhost:8000` ile açar
+  → önizleme çıkmaz, fiş Windows'un **varsayılan yazıcısına** basılır (şu an varsayılan: **TP80NB** fiş yazıcısı)
+  - Kısayolu yeniden oluşturmak: `powershell -ExecutionPolicy Bypass -File scripts\masaustu-kisayolu.ps1`
+  - ⚠️ Varsayılan yazıcı değişirse fiş o yazıcıya gider. Ayrı profil olduğu için ilk açılışta programa bir kez giriş yapılır
+- Testler: 99 test, hepsi geçiyor
+
 ### 🧪 Deneme carileri
 - **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir
 - **02.10.2026: ikisi de sıfırlandı** (kullanıcı: "deneme olarak halit ve kadir hesabını kullandık, bunları sıfırla").

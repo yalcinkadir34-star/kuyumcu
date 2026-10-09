@@ -432,7 +432,9 @@ class AtolyeTest extends TestCase
         $this->get(route('work-orders.show', WorkOrder::first()))->assertSee('data-sound="giris"', false);
 
         $this->cikis()->assertSessionHas('ses', 'cikis');
-        $this->get(route('workshop-deliveries.index'))->assertSee('data-sound="cikis"', false);
+        $this->get(route('workshop-deliveries.index'))
+            ->assertSee('data-sound="cikis"', false)
+            ->assertSee('data-print-receipt', false); // fiş yeni sekme açmadan yazdırılır
 
         // Bir sonraki sayfada ses tekrar çalmaz
         $this->get(route('workshop-deliveries.index'))->assertDontSee('data-sound', false);
