@@ -645,6 +645,12 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
   - ⚠️ Varsayılan yazıcı değişirse fiş o yazıcıya gider. Ayrı profil olduğu için ilk açılışta programa bir kez giriş yapılır
 - Testler: 99 test, hepsi geçiyor
 
+### ✅ v0.9.6: Fiş iki nüsha (09.10.2026)
+- **Kullanıcı isteği:** "Fişe bastığımda 2 adet fiş çıksın, birisi bana birisi müşteriye"
+- Fiş sayfası aynı fişi iki kez basar: **(Müşteri Nüshası)** ve **(Atölye Nüshası)**. Başlığın altında nüsha adı yazar
+- Nüshalar arasında sayfa sonu (`break-after-page`) var: yazıcı ikisini ayrı fiş olarak basar (tek yazdırma işi)
+- Testler: 99 test, hepsi geçiyor
+
 ### 🧪 Deneme carileri
 - **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir
 - **02.10.2026: ikisi de sıfırlandı** (kullanıcı: "deneme olarak halit ve kadir hesabını kullandık, bunları sıfırla").

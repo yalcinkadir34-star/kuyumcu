@@ -29,8 +29,12 @@
         </button>
     </div>
 
-    {{-- Fiş --}}
-    <div class="mx-auto my-6 w-[74mm] bg-white p-[3mm] text-[11px] leading-snug shadow-lg print:m-0 print:w-auto print:p-0 print:shadow-none">
+    {{-- Fiş: iki nüsha (biri müşteriye, biri atölyeye); yazdırırken her nüsha ayrı sayfa = ayrı fiş --}}
+    @foreach (['Müşteri Nüshası', 'Atölye Nüshası'] as $copy)
+    <div @class([
+        'mx-auto my-6 w-[74mm] bg-white p-[3mm] text-[11px] leading-snug shadow-lg print:m-0 print:w-auto print:p-0 print:shadow-none',
+        'break-after-page' => ! $loop->last,
+    ])>
         {{-- Başlık --}}
         <div class="border-b-2 border-stone-900 pb-2 text-center">
             <div class="text-sm font-bold tracking-wide">{{ $firma['name'] }}</div>
@@ -43,6 +47,7 @@
         </div>
 
         <div class="mt-2 text-center font-bold tracking-widest uppercase">Atölye Çıkış Fişi</div>
+        <div class="text-center text-[10px] font-semibold tracking-wide">({{ $copy }})</div>
 
         <dl class="mt-2 space-y-0.5">
             <div class="flex justify-between gap-2"><dt class="text-stone-500">Fiş No</dt><dd class="font-mono font-semibold">{{ $no }}</dd></div>
@@ -101,5 +106,6 @@
 
         <div class="mt-4 text-center text-stone-500">Bu fiş bilgi amaçlıdır.</div>
     </div>
+    @endforeach
 </body>
 </html>

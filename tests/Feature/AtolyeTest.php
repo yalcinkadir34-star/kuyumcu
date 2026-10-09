@@ -410,6 +410,9 @@ class AtolyeTest extends TestCase
             ->assertSee('Bu fiş bilgi amaçlıdır.')
             // Sadece 80 mm fiş yazıcısı; A5 seçeneği yok
             ->assertSee('80mm auto', false)
+            // İki nüsha, ayrı sayfalarda (biri müşteriye, biri atölyeye)
+            ->assertSeeInOrder(['Müşteri Nüshası', 'Atölye Nüshası'])
+            ->assertSee('break-after-page', false)
             ->assertDontSee('Normal (A5)');
 
         // İkinci çıkış: son durum 11,262 − 5 × 0,625 = 8,137
