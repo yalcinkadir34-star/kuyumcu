@@ -679,6 +679,8 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - **09.10.2026: `halit` yine sıfırlandı** (kullanıcı: "halitte yapılan işlemleri sil, onlar denemeydi").
   Giriş A00042 (8 ayar, 100 gr), çıkış T00055 ve 2 hareket silindi; bakiye 0
   - Yedek: `storage/app/yedek/kuyumcu-2026-10-09-halit-sifirlama-oncesi.sql`
+- **09.10.2026 (2): `halit` yine sıfırlandı.** Girişler A00043, A00044, çıkış T00058 (2 satır) ve 4 hareket silindi; bakiye 0
+  - Yedek: `storage/app/yedek/kuyumcu-2026-10-09-halit-sifirlama-oncesi-2.sql`
 - Tekrar "sil/sıfırla" denirse: önce yedek, sonra aynı yöntem (çıkışlar → girişler → kalan hareketler, model üzerinden)
 - Diğer cariler **gerçek veridir**, dokunulmaz
 
