@@ -121,9 +121,16 @@ class WorkshopDeliveryController extends Controller
             ->with('success', "{$delivery->number} çıkışı silindi, cari kaydı geri alındı.");
     }
 
-    /** Müşteriye verilen bilgi fişi (80 mm fiş yazıcısı için) */
-    public function receipt(WorkOrderDelivery $delivery): View
+    /**
+     * Müşteriye verilen bilgi fişi (80 mm fiş yazıcısı için). Ekranda iki nüsha görünür;
+     * ?nusha=musteri|atolye tek nüsha verir (yazdırırken her nüsha ayrı iş → yazıcı arada keser).
+     */
+    public function receipt(Request $request, WorkOrderDelivery $delivery): View
     {
+        $allCopies = ['musteri' => 'Müşteri Nüshası', 'atolye' => 'Atölye Nüshası'];
+        $copy = $request->query('nusha');
+        $copies = isset($allCopies[$copy]) ? [$allCopies[$copy]] : array_values($allCopies);
+
         $delivery->load(['account', 'lines']);
 
         // Müşterinin bu çıkıştan (son satırından) hemen sonraki bakiyesi; fiş sonradan yazdırılsa da değişmez
@@ -137,6 +144,7 @@ class WorkshopDeliveryController extends Controller
             'balances' => $balances,
             'currencies' => Currency::query()->orderBy('sort')->get()->keyBy('id'),
             'firma' => config('kuyumcu.firma'),
+            'copies' => $copies,
         ]);
     }
 }

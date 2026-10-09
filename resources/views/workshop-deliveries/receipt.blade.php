@@ -11,7 +11,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Fiş {{ $no }} · {{ $delivery->account->name }}</title>
-    @vite(['resources/css/app.css'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         /* 80 mm termal fiş yazıcısı */
         @page { size: 80mm auto; margin: 3mm; }
@@ -23,14 +23,15 @@
     {{-- Ekran araç çubuğu (yazdırılmaz) --}}
     <div class="sticky top-0 z-10 flex flex-wrap items-center justify-center gap-2 border-b border-stone-300 bg-white px-4 py-3 shadow-sm print:hidden">
         <a href="{{ route('workshop-deliveries.index') }}" class="btn btn-secondary">← Çıkışlara dön</a>
-        <button type="button" onclick="window.print()" class="btn btn-gold">
+        <a href="{{ route('workshop-deliveries.receipt', $delivery) }}" data-print-receipt class="btn btn-gold">
             <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
             Yazdır
-        </button>
+        </a>
     </div>
 
-    {{-- Fiş: iki nüsha (biri müşteriye, biri atölyeye); yazdırırken her nüsha ayrı sayfa = ayrı fiş --}}
-    @foreach (['Müşteri Nüshası', 'Atölye Nüshası'] as $copy)
+    {{-- Fiş: iki nüsha (biri müşteriye, biri atölyeye). ?nusha=musteri / ?nusha=atolye → tek nüsha.
+         Yazdırırken her nüsha ayrı yazdırma işi olarak gönderilir; fiş yazıcısı her işin sonunda keser --}}
+    @foreach ($copies as $copy)
     <div @class([
         'mx-auto my-6 w-[74mm] bg-white p-[3mm] text-[11px] leading-snug shadow-lg print:m-0 print:w-auto print:p-0 print:shadow-none',
         'break-after-page' => ! $loop->last,

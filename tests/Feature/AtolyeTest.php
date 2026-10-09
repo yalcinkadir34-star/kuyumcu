@@ -415,6 +415,16 @@ class AtolyeTest extends TestCase
             ->assertSee('break-after-page', false)
             ->assertDontSee('Normal (A5)');
 
+        // Yazdırırken her nüsha ayrı istenir (ayrı yazdırma işi → yazıcı arada keser)
+        $this->get(route('workshop-deliveries.receipt', [$birinci, 'nusha' => 'musteri']))
+            ->assertOk()
+            ->assertSee('Müşteri Nüshası')
+            ->assertDontSee('Atölye Nüshası')
+            ->assertDontSee('break-after-page', false);
+        $this->get(route('workshop-deliveries.receipt', [$birinci, 'nusha' => 'atolye']))
+            ->assertSee('Atölye Nüshası')
+            ->assertDontSee('Müşteri Nüshası');
+
         // İkinci çıkış: son durum 11,262 − 5 × 0,625 = 8,137
         $this->get(route('workshop-deliveries.receipt', $ikinci))
             ->assertOk()

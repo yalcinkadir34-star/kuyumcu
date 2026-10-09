@@ -651,6 +651,16 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Nüshalar arasında sayfa sonu (`break-after-page`) var: yazıcı ikisini ayrı fiş olarak basar (tek yazdırma işi)
 - Testler: 99 test, hepsi geçiyor
 
+### ✅ v0.9.7: İki nüsha ayrı ayrı kesilir (09.10.2026)
+- **Sorun:** "Fişi makine kesmedi, tek parça verdi". TP80NB sürücüsü tek yazdırma işindeki sayfaları birleştirip sadece en sonda kesiyor
+  (sürücünün kesme ayarı Windows'tan okunamıyor)
+- **Çözüm:** iki nüsha **iki ayrı yazdırma işi** olarak gönderiliyor: önce `?nusha=musteri`, sonra `?nusha=atolye`
+  gizli çerçevede yüklenip sırayla yazdırılır. Yazıcı her işin sonunda keser
+  - Fiş sayfasındaki **Yazdır** butonu da aynı yolu kullanır (fiş sayfası artık `app.js` yüklüyor)
+  - Çift tıklamada fiş iki kez basılmasın diye yazdırma sürerken yeni tıklama yok sayılır
+  - Ekranda (parametresiz) iki nüsha alt alta görünmeye devam eder
+- Testler: 99 test, hepsi geçiyor
+
 ### 🧪 Deneme carileri
 - **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir
 - **02.10.2026: ikisi de sıfırlandı** (kullanıcı: "deneme olarak halit ve kadir hesabını kullandık, bunları sıfırla").

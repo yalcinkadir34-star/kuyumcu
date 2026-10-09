@@ -30,23 +30,44 @@ document.addEventListener('submit', (event) => {
 
 // <a data-print-receipt href="…/fis">: fişi yeni sekme açmadan, gizli bir çerçevede yükleyip yazdırır.
 // Chrome "--kiosk-printing" ile açıldıysa önizleme çıkmaz, doğrudan varsayılan yazıcıya (fiş yazıcısı) basar.
-document.addEventListener('click', (event) => {
-    const link = event.target.closest('[data-print-receipt]');
-    if (!link || event.ctrlKey || event.metaKey || event.shiftKey) return;
+// İki nüsha (müşteri, atölye) iki ayrı yazdırma işi olarak gider: fiş yazıcısı her işin sonunda kağıdı keser.
+const RECEIPT_COPIES = ['musteri', 'atolye'];
 
-    event.preventDefault();
-    document.getElementById('receipt-print-frame')?.remove();
-
+const printInFrame = (url) => new Promise((resolve) => {
     const frame = document.createElement('iframe');
-    frame.id = 'receipt-print-frame';
     frame.setAttribute('aria-hidden', 'true');
     frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
     frame.addEventListener('load', () => {
         frame.contentWindow.focus();
-        frame.contentWindow.print();
+        frame.contentWindow.print(); // yazdırma bitene kadar bekler
+        setTimeout(() => {
+            frame.remove();
+            resolve();
+        }, 500);
     }, { once: true });
-    frame.src = link.href;
+    frame.src = url;
     document.body.append(frame);
+});
+
+let printing = false;
+
+document.addEventListener('click', async (event) => {
+    const link = event.target.closest('[data-print-receipt]');
+    if (!link || event.ctrlKey || event.metaKey || event.shiftKey) return;
+
+    event.preventDefault();
+    if (printing) return; // çift tıklamada fiş iki kez basılmasın
+    printing = true;
+
+    try {
+        for (const copy of RECEIPT_COPIES) {
+            const url = new URL(link.href, window.location.href);
+            url.searchParams.set('nusha', copy);
+            await printInFrame(url.toString());
+        }
+    } finally {
+        printing = false;
+    }
 });
 
 // Atölye girişi/çıkışı kaydedilince sesli uyarı (<div data-sound="giris|cikis">, components/flash).
