@@ -661,6 +661,12 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
   - Ekranda (parametresiz) iki nüsha alt alta görünmeye devam eder
 - Testler: 99 test, hepsi geçiyor
 
+### ✅ v0.9.8: Fişte toplam gram gösterilmez (09.10.2026)
+- İki nüsha ayrı kesilerek basıldı ✓ (kullanıcı fotoğrafla doğruladı)
+- **Kullanıcı isteği:** "Toplam yazan yerde 220 gram var, ayarlar farklı olduğu için toplam ağırlık görünmesin, sadece has görünsün"
+- Fişin Toplam satırında artık sadece **toplam has** var; satırlardaki gramlar duruyor
+- Testler: 100 test, hepsi geçiyor
+
 ### 🧪 Deneme carileri
 - **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir
 - **02.10.2026: ikisi de sıfırlandı** (kullanıcı: "deneme olarak halit ve kadir hesabını kullandık, bunları sıfırla").

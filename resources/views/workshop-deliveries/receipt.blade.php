@@ -81,8 +81,8 @@
                 <tfoot>
                     <tr class="border-y-2 border-stone-900 text-xs font-bold">
                         <td class="py-1 pr-1">Toplam</td>
-                        <td class="py-1 pr-1 text-right whitespace-nowrap tabular-nums">{{ Amount::formatMilli($delivery->grossOutMilli(), $gr, false) }}</td>
-                        <td class="py-1 pr-1"></td>
+                        {{-- Ayarlar farklı olabildiği için toplam gram gösterilmez, sadece toplam has --}}
+                        <td colspan="2" class="py-1 pr-1"></td>
                         <td class="py-1 text-right whitespace-nowrap tabular-nums">{{ Amount::formatMilli($delivery->hasOutMilli(), $gr) }}</td>
                     </tr>
                 </tfoot>

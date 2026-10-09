@@ -216,10 +216,11 @@ class AtolyeTest extends TestCase
         $this->assertSame(-117_000 + 12_974, $this->hasBakiye());
         $this->assertSame(178_000, WorkshopTotals::forAccount($this->firma->id)['ramat_gram']);
 
-        // Fişte satırlar ayrı ayrı ve toplam
+        // Fişte satırlar ayrı ayrı ve toplam has (toplam gram yazılmaz: ayarlar farklı)
         $this->actingAs($this->user)->get(route('workshop-deliveries.receipt', $delivery))
             ->assertOk()
-            ->assertSeeInOrder(['14 ayar zincir', '10,000', '0,585', '5,850', '14 ayar bilezik', '0,625', '3,125', '18 ayar yüzük', '0,750', '8 ayar küpe', '0,333', '0,999', 'Toplam', '22,000', '12,974 gr']);
+            ->assertSeeInOrder(['14 ayar zincir', '10,000', '0,585', '5,850', '14 ayar bilezik', '0,625', '3,125', '18 ayar yüzük', '0,750', '8 ayar küpe', '0,333', '0,999', 'Toplam', '12,974 gr'])
+            ->assertDontSee('22,000');
 
         // Çıkış silinince tüm satırların cari kayıtları geri alınır
         $this->actingAs($this->user)->delete(route('workshop-deliveries.destroy', $delivery));
@@ -381,6 +382,29 @@ class AtolyeTest extends TestCase
         $this->cikis()->assertSessionHas('receipt_delivery_id');
 
         $this->followingRedirects()->cikis(['gross_out' => '10'])->assertSee('Fişi Yazdır');
+    }
+
+    public function test_fiste_toplam_gram_gorunmez_sadece_toplam_has(): void
+    {
+        $this->giris(['gross_in' => '300', 'purity' => '0,585']);
+
+        $this->actingAs($this->user)->post(route('workshop-deliveries.store'), [
+            'account_id' => $this->firma->id,
+            'delivered_at' => '2026-09-10T10:00:00',
+            'kind' => 'atolye',
+            'lines' => [
+                ['product' => '14 ayar', 'gross_out' => '100', 'purity_out' => '0,625'],
+                ['product' => '18 ayar', 'gross_out' => '120', 'purity_out' => '0,780'],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        // 100 × 0,625 = 62,5 · 120 × 0,780 = 93,6 → toplam has 156,1; toplam gram (220) yazılmaz
+        $this->get(route('workshop-deliveries.receipt', [WorkOrderDelivery::first(), 'nusha' => 'musteri']))
+            ->assertOk()
+            ->assertSee('100,000')
+            ->assertSee('120,000')
+            ->assertDontSee('220,000')
+            ->assertSeeInOrder(['Toplam', '156,100 gr']);
     }
 
     public function test_musteri_fisi_bilgileri_gosterir(): void
