@@ -68,10 +68,10 @@ class WorkOrderController extends Controller
             .'Müşterinin carisine '.Amount::format($order->has_in, Currency::firstWhere('code', 'HAS')).' has alacak yazıldı.';
 
         if ($request->boolean('yeni')) {
-            return redirect()->route('work-orders.create', ['cari' => $order->account_id])->with('success', $message);
+            return redirect()->route('work-orders.create', ['cari' => $order->account_id])->with('success', $message)->with('ses', 'giris');
         }
 
-        return redirect()->route('work-orders.show', $order)->with('success', $message);
+        return redirect()->route('work-orders.show', $order)->with('success', $message)->with('ses', 'giris');
     }
 
     public function show(WorkOrder $workOrder): View

@@ -407,14 +407,35 @@ class AtolyeTest extends TestCase
             ->assertSeeInOrder(['SON DURUM', 'Alacağınız (Has)', '11,262 gr'])
             ->assertDontSee('Teslim Eden')
             ->assertDontSee('Teslim Alan')
-            ->assertSee('Bu fiş bilgi amaçlıdır.');
+            ->assertSee('Bu fiş bilgi amaçlıdır.')
+            // Sadece 80 mm fiş yazıcısı; A5 seçeneği yok
+            ->assertSee('80mm auto', false)
+            ->assertDontSee('Normal (A5)');
 
         // İkinci çıkış: son durum 11,262 − 5 × 0,625 = 8,137
-        $this->get(route('workshop-deliveries.receipt', [$ikinci, 'boyut' => '80']))
+        $this->get(route('workshop-deliveries.receipt', $ikinci))
             ->assertOk()
             ->assertSee('T00002')
-            ->assertSee('8,137 gr')
-            ->assertSee('80mm auto', false);
+            ->assertSee('8,137 gr');
+    }
+
+    public function test_giris_ve_cikista_sesli_uyari_isareti_gonderilir(): void
+    {
+        $this->actingAs($this->user)->post(route('work-orders.store'), [
+            'account_id' => $this->firma->id,
+            'product' => '14 ayar bilezik',
+            'received_at' => '2026-09-01T10:00:00',
+            'gross_in' => '200',
+            'purity' => '0,585',
+        ])->assertSessionHas('ses', 'giris');
+
+        $this->get(route('work-orders.show', WorkOrder::first()))->assertSee('data-sound="giris"', false);
+
+        $this->cikis()->assertSessionHas('ses', 'cikis');
+        $this->get(route('workshop-deliveries.index'))->assertSee('data-sound="cikis"', false);
+
+        // Bir sonraki sayfada ses tekrar çalmaz
+        $this->get(route('workshop-deliveries.index'))->assertDontSee('data-sound', false);
     }
 
     public function test_giris_formunda_ayar_milyem_tablosu_var(): void

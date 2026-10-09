@@ -624,6 +624,16 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
   - ⚠️ PHP sürümü değişirse (Laragon güncellemesi) OPcache yeni `php.ini`'de tekrar açılmalı
 - Testler: 98 test, hepsi geçiyor
 
+### ✅ v0.9.4: Fiş sadece 80 mm, atölye giriş/çıkışında ses (09.10.2026)
+- **Fiş:** kullanıcı sadece fiş yazıcısını (80 mm) kullanıyor. "Normal (A5)" seçeneği ve `?boyut=` parametresi kaldırıldı,
+  fiş her zaman 80 mm (`@page { size: 80mm auto }`)
+- **Ses** (kullanıcı: "ürün girişi ve çıkışı olduğunda bir ses olsun ki işlemin gerçekleştiğini anlayabileyim"):
+  - Atölye girişi kaydedilince **yükselen** iki nota, çıkışı kaydedilince **alçalan** iki nota çalar
+  - Ses dosyası yok, tarayıcıda üretilir (Web Audio, `resources/js/app.js` → `playSound`)
+  - Sunucu `->with('ses', 'giris'|'cikis')` gönderir, `components/flash` sayfaya `data-sound` koyar; sadece bir kez çalar
+  - Tarayıcı sesi engellerse sayfadaki ilk tıklamada çalar. Bilgisayarın sesi açık olmalı
+- Testler: 99 test, hepsi geçiyor
+
 ### 🧪 Deneme carileri
 - **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir
 - **02.10.2026: ikisi de sıfırlandı** (kullanıcı: "deneme olarak halit ve kadir hesabını kullandık, bunları sıfırla").

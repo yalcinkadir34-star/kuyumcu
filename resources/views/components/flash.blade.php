@@ -11,3 +11,8 @@
         {{ session('error') }}
     </div>
 @endif
+
+{{-- Atölye girişi/çıkışı kaydedilince sesli uyarı (resources/js/app.js → playSound) --}}
+@if (in_array(session('ses'), ['giris', 'cikis'], true))
+    <div data-sound="{{ session('ses') }}" hidden></div>
+@endif

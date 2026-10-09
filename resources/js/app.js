@@ -28,6 +28,45 @@ document.addEventListener('submit', (event) => {
     }
 });
 
+// Atölye girişi/çıkışı kaydedilince sesli uyarı (<div data-sound="giris|cikis">, components/flash).
+// Ses dosyası yok, tarayıcıda üretilir. Giriş: yükselen iki nota · Çıkış: alçalan iki nota
+const SOUNDS = {
+    giris: [659, 988],
+    cikis: [988, 659],
+};
+
+const playSound = (name) => {
+    const notes = SOUNDS[name];
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!notes || !AudioContext) return;
+
+    const context = new AudioContext();
+    let played = false;
+    const play = () => !played && context.state === 'running' && (played = true) && notes.forEach((frequency, index) => {
+        const start = context.currentTime + index * 0.18;
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.5, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.35);
+
+        oscillator.connect(gain).connect(context.destination);
+        oscillator.start(start);
+        oscillator.stop(start + 0.4);
+    });
+
+    // Tarayıcı sesi engellediyse sayfadaki ilk tıklamada çalar
+    play();
+    context.resume().then(play).catch(() => {});
+    document.addEventListener('pointerdown', () => context.resume().then(play), { once: true });
+};
+
+const soundMarker = document.querySelector('[data-sound]');
+if (soundMarker) playSound(soundMarker.dataset.sound);
+
 // ---- Atölye hesap önizlemeleri (kesin hesap sunucuda yapılır) ----
 
 // "1.250,5" / "1250.5" / "585" → sayı

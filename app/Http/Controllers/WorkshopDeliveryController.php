@@ -107,7 +107,8 @@ class WorkshopDeliveryController extends Controller
 
         return redirect()->route('workshop-deliveries.index')
             ->with('success', $message)
-            ->with('receipt_delivery_id', $delivery->id);
+            ->with('receipt_delivery_id', $delivery->id)
+            ->with('ses', 'cikis');
     }
 
     public function destroy(Request $request, WorkOrderDelivery $delivery): RedirectResponse
@@ -120,8 +121,8 @@ class WorkshopDeliveryController extends Controller
             ->with('success', "{$delivery->number} çıkışı silindi, cari kaydı geri alındı.");
     }
 
-    /** Müşteriye verilen bilgi fişi (yazdırılabilir). ?boyut=80 → 80 mm fiş yazıcısı */
-    public function receipt(Request $request, WorkOrderDelivery $delivery): View
+    /** Müşteriye verilen bilgi fişi (80 mm fiş yazıcısı için) */
+    public function receipt(WorkOrderDelivery $delivery): View
     {
         $delivery->load(['account', 'lines']);
 
@@ -135,7 +136,6 @@ class WorkshopDeliveryController extends Controller
             'delivery' => $delivery,
             'balances' => $balances,
             'currencies' => Currency::query()->orderBy('sort')->get()->keyBy('id'),
-            'size' => $request->query('boyut') === '80' ? '80' : 'a5',
             'firma' => config('kuyumcu.firma'),
         ]);
     }
