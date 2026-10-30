@@ -667,6 +667,13 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Fişin Toplam satırında artık sadece **toplam has** var; satırlardaki gramlar duruyor
 - Testler: 100 test, hepsi geçiyor
 
+### ✅ v0.9.9: Girişler listesinde sil tuşu (30.10.2026)
+- **Kullanıcı isteği:** "Programda girişi sil tuşu olsun"
+- Atölye → Girişler listesinde her satırın sonunda çöp kutusu (sadece **Yönetici**), çıkışlar listesindekiyle aynı
+- Onay sorar; silinince carideki giriş kaydı da silinir. Çıkışı yapılmış giriş, kalan çıkışların altına düşecekse silinmez (mevcut kural)
+- Düzenleme sayfasındaki "Fişi Sil" de duruyor
+- Testler: 100 test, hepsi geçiyor
+
 ### 🧪 Deneme carileri
 - **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir
 - **02.10.2026: ikisi de sıfırlandı** (kullanıcı: "deneme olarak halit ve kadir hesabını kullandık, bunları sıfırla").

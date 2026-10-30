@@ -33,6 +33,9 @@
                         <th class="text-right">Gram</th>
                         <th class="text-right">Milyem</th>
                         <th class="text-right">Has</th>
+                        @if (auth()->user()->isAdmin())
+                            <th class="w-12"></th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody>
@@ -49,10 +52,22 @@
                             <td class="text-right tabular-nums whitespace-nowrap">{{ Amount::format($order->gross_in, $gr, false) }}</td>
                             <td class="text-right tabular-nums text-stone-600">{{ Workshop::formatPurity($order->purity) }}</td>
                             <td class="text-right font-medium tabular-nums whitespace-nowrap text-gold-800">{{ Amount::format($order->has_in, $gr, false) }}</td>
+                            @if (auth()->user()->isAdmin())
+                                <td class="text-right whitespace-nowrap" onclick="event.stopPropagation()">
+                                    <form method="POST" action="{{ route('work-orders.destroy', $order) }}" class="inline"
+                                          data-confirm="{{ $order->number }} giriş fişi silinsin mi? Carideki giriş kaydı da silinecek.">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600" title="Girişi sil" aria-label="Girişi sil">
+                                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+                                        </button>
+                                    </form>
+                                </td>
+                            @endif
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="py-12 text-center text-stone-500">
+                            <td colspan="{{ auth()->user()->isAdmin() ? 7 : 6 }}" class="py-12 text-center text-stone-500">
                                 @if (request()->hasAny(['q', 'cari', 'baslangic', 'bitis']))
                                     Kayıt bulunamadı.
                                 @else
