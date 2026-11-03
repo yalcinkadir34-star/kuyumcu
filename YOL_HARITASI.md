@@ -674,6 +674,13 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Düzenleme sayfasındaki "Fişi Sil" de duruyor
 - Testler: 100 test, hepsi geçiyor
 
+### ✅ v0.9.10: Atölye çıkışında ayar butonları (03.11.2026)
+- **Kullanıcı isteği:** girişteki 8/10/14/18/22 ayar butonları çıkışta da olsun
+- Çıkış formunda her satırın ürün kutusunun üstünde ayar butonları: tıklayınca ürüne "14 ayar" yazılır, milyem kutusu o ayarın milyemiyle (0,585) dolar, imleç grama geçer
+- Milyem sonra elle değiştirilebilir (işçilik eklemek için). Ürüne elle "14 ayar" yazılınca da ilgili buton vurgulanır
+- Ortak JS: `ayarPatternOf`, `withAyar` (giriş ve çıkış formu aynısını kullanıyor)
+- Testler: 100 test, hepsi geçiyor
+
 ### 🧪 Deneme carileri
 - **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir
 - **02.10.2026: ikisi de sıfırlandı** (kullanıcı: "deneme olarak halit ve kadir hesabını kullandık, bunları sıfırla").

@@ -11,7 +11,7 @@
     <div class="max-w-4xl">
         <x-page-header title="Atölyeden Çıkış" subtitle="Müşteriye teslim edilen ürünleri satır satır girin: her satırın kendi ürünü, gramı ve milyemi olabilir." :back="route('workshop-deliveries.index')" />
 
-        <form method="POST" action="{{ route('workshop-deliveries.store') }}" class="card" data-delivery-form data-info='@json($info)'>
+        <form method="POST" action="{{ route('workshop-deliveries.store') }}" class="card" data-delivery-form data-info='@json($info)' data-ayar-milyem='@json(config("kuyumcu.ayar_milyem"))'>
             @csrf
             <div class="grid gap-5 p-5 sm:grid-cols-2">
                 <div class="sm:col-span-2">
@@ -66,6 +66,13 @@
                                 <tr data-line>
                                     <td class="text-stone-400" data-line-no>{{ $loop->iteration }}</td>
                                     <td>
+                                        {{-- Tıklayınca ürüne "14 ayar" yazılır ve milyem dolar (config/kuyumcu.php → ayar_milyem) --}}
+                                        <div class="mb-1.5 flex flex-wrap gap-1">
+                                            @foreach (config('kuyumcu.ayar_milyem') as $ayar => $milyem)
+                                                <button type="button" data-ayar-pick="{{ $ayar }}" title="{{ $ayar }} ayar → {{ $milyem }}"
+                                                        class="rounded-md border border-stone-300 bg-white px-2 py-0.5 text-xs font-semibold text-stone-700 transition hover:border-gold-400 hover:bg-gold-50 data-[active]:border-gold-500 data-[active]:bg-gold-500 data-[active]:text-white">{{ $ayar }}</button>
+                                            @endforeach
+                                        </div>
                                         <input name="lines[{{ $i }}][product]" value="{{ $line['product'] ?? '' }}" data-field="product"
                                                class="input py-1.5 @error("lines.$i.product") input-error @enderror" placeholder="Örn: 14 ayar zincir">
                                     </td>

@@ -132,6 +132,16 @@ const formatNumber = (number, decimals = 3) =>
 // Has hesabı: küsurat atılır (sunucudaki Workshop::hasMilli ile aynı), 15,61875 → 15,618
 const hasOf = (gram, purity) => Math.trunc(Math.round(gram * purity * 1e7) / 1e4) / 1000;
 
+// "14 ayar", "14ayar", "14 AYAR", "14k" → 14 (ayarlar config/kuyumcu.php → ayar_milyem)
+const ayarPatternOf = (ayarMilyem) =>
+    new RegExp(`(?:^|[^0-9])(${Object.keys(ayarMilyem).join('|')})\\s*(?:ayar|ayr|k)(?![a-zçğıöşü])`, 'i');
+
+// Ürün metnine "14 ayar" yazar; varsa eski ayarın yerine
+const withAyar = (text, ayar, pattern) => {
+    const rest = text.replace(pattern, ' ').replace(/\s+/g, ' ').trim();
+    return rest ? `${ayar} ayar ${rest}` : `${ayar} ayar`;
+};
+
 // Atölye giriş formu: has = gram × milyem
 //  - Ürüne "14 ayar" gibi yazılınca milyem otomatik dolar (config/kuyumcu.php → ayar_milyem)
 //  - Ayar yazılmamışsa firmanın son milyemi önerilir
@@ -150,8 +160,7 @@ if (workOrderForm) {
     // Düzenleme ya da hatalı form dönüşünde mevcut değer korunur
     let purityTouched = purity.value.trim() !== '';
 
-    // "14 ayar", "14ayar", "14 AYAR", "14k" → 14
-    const ayarPattern = new RegExp(`(?:^|[^0-9])(${Object.keys(ayarMilyem).join('|')})\\s*(?:ayar|ayr|k)(?![a-zçğıöşü])`, 'i');
+    const ayarPattern = ayarPatternOf(ayarMilyem);
     const ayarOf = () => product.value.match(ayarPattern)?.[1] ?? null;
 
     const update = () => {
@@ -182,10 +191,7 @@ if (workOrderForm) {
     // Ayar butonu: ürüne "14 ayar" yazar (varsa eski ayarın yerine) ve milyemi o ayarınkiyle doldurur
     workOrderForm.querySelectorAll('[data-ayar-pick]').forEach((button) => {
         button.addEventListener('click', () => {
-            const label = `${button.dataset.ayarPick} ayar`;
-            const rest = product.value.replace(ayarPattern, ' ').replace(/\s+/g, ' ').trim();
-
-            product.value = rest ? `${label} ${rest}` : label;
+            product.value = withAyar(product.value, button.dataset.ayarPick, ayarPattern);
             purityTouched = false; // butonla seçim, elle girilen milyemin önüne geçer
             fill();
             gram.focus();
@@ -330,6 +336,7 @@ if (deliveryForm) {
             input.classList.remove('input-error');
         });
         row.querySelectorAll('.field-error').forEach((error) => error.remove());
+        row.querySelectorAll('[data-active]').forEach((button) => button.removeAttribute('data-active'));
 
         // Milyem: önceki satırınki (aynı işçilik sık kullanılır), yoksa müşterinin son milyemi
         field(row, 'purity_out').value = field(last, 'purity_out').value || info[account.value]?.sonMilyem || '';
@@ -339,6 +346,34 @@ if (deliveryForm) {
         update();
         field(row, 'product').focus();
     };
+
+    // Satırdaki ayar butonları: ürüne "14 ayar" yazar ve milyemi o ayarınkiyle doldurur
+    const ayarMilyem = JSON.parse(deliveryForm.dataset.ayarMilyem || '{}');
+    const ayarPattern = ayarPatternOf(ayarMilyem);
+
+    const markAyar = (row) => {
+        const ayar = field(row, 'product').value.match(ayarPattern)?.[1] ?? null;
+        row.querySelectorAll('[data-ayar-pick]').forEach((button) => {
+            button.toggleAttribute('data-active', button.dataset.ayarPick === ayar);
+        });
+    };
+
+    linesBody.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-ayar-pick]');
+        if (!button) return;
+
+        const row = button.closest('[data-line]');
+        const ayar = button.dataset.ayarPick;
+        field(row, 'product').value = withAyar(field(row, 'product').value, ayar, ayarPattern);
+        field(row, 'purity_out').value = ayarMilyem[ayar];
+        markAyar(row);
+        update();
+        field(row, 'gross_out').focus();
+    });
+
+    linesBody.addEventListener('input', (event) => {
+        if (event.target.dataset.field === 'product') markAyar(event.target.closest('[data-line]'));
+    });
 
     linesBody.addEventListener('click', (event) => {
         const button = event.target.closest('[data-line-remove]');
@@ -382,6 +417,7 @@ if (deliveryForm) {
     deliveryForm.addEventListener('change', update);
     account.addEventListener('change', onAccount);
     onAccount();
+    rows().forEach(markAyar);
 }
 
 // Hareket formu: seçilen türe göre cari/kasa alanlarını göster, gizle
