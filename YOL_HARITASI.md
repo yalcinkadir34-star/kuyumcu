@@ -681,6 +681,12 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Ortak JS: `ayarPatternOf`, `withAyar` (giriş ve çıkış formu aynısını kullanıyor)
 - Testler: 100 test, hepsi geçiyor
 
+### ✅ v0.9.11: Çıkışlar listesinde satır satır gram (03.11.2026)
+- **Kullanıcı isteği:** "T00276'da ekranda 23,07 ve 10,26'yı görmek istiyorum" (fişte görünüyordu, listede sadece 33,330 vardı)
+- Çok satırlı çıkışta Gram, Milyem ve Has sütunlarında her satır alt alta, altında çizgiyle toplam. Tek satırlı çıkış eskisi gibi tek değer
+- "Satır" (adet) sütunu kaldırıldı, yerine **Milyem** sütunu
+- Testler: 100 test, hepsi geçiyor
+
 ### 🧪 Deneme carileri
 - **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir
 - **02.10.2026: ikisi de sıfırlandı** (kullanıcı: "deneme olarak halit ve kadir hesabını kullandık, bunları sıfırla").

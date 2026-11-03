@@ -45,7 +45,7 @@
                         <th>Tarih</th>
                         <th>Müşteri / Ürün</th>
                         <th class="text-right">Gram</th>
-                        <th class="text-right">Satır</th>
+                        <th class="text-right">Milyem</th>
                         <th class="text-right">Has</th>
                         <th class="w-24"></th>
                     </tr>
@@ -66,9 +66,33 @@
                                     <div class="max-w-64 truncate text-xs text-stone-500">{{ collect([$delivery->productsLabel(), $delivery->notes])->filter()->join(' · ') }}</div>
                                 @endif
                             </td>
-                            <td class="text-right tabular-nums whitespace-nowrap">{{ Amount::formatMilli($delivery->grossOutMilli(), $gr, false) }}</td>
-                            <td class="text-right tabular-nums text-stone-600" title="{{ $delivery->lines->map(fn ($l) => Workshop::formatPurity($l->purity_out))->join(', ') }}">{{ $delivery->lines->count() }}</td>
-                            <td class="text-right font-medium tabular-nums whitespace-nowrap text-gold-800">{{ Amount::formatMilli($delivery->hasOutMilli(), $gr, false) }}</td>
+                            {{-- Birden fazla satırlı çıkışta her satır alt alta, altında toplam --}}
+                            @php $multi = $delivery->lines->count() > 1; @endphp
+                            <td class="text-right tabular-nums whitespace-nowrap">
+                                @if ($multi)
+                                    @foreach ($delivery->lines as $line)
+                                        <div>{{ Amount::format($line->gross_out, $gr, false) }}</div>
+                                    @endforeach
+                                    <div class="mt-0.5 border-t border-stone-300 pt-0.5 font-medium">{{ Amount::formatMilli($delivery->grossOutMilli(), $gr, false) }}</div>
+                                @else
+                                    {{ Amount::formatMilli($delivery->grossOutMilli(), $gr, false) }}
+                                @endif
+                            </td>
+                            <td class="text-right tabular-nums whitespace-nowrap text-stone-600">
+                                @foreach ($delivery->lines as $line)
+                                    <div>{{ Workshop::formatPurity($line->purity_out) }}</div>
+                                @endforeach
+                            </td>
+                            <td class="text-right tabular-nums whitespace-nowrap text-gold-800">
+                                @if ($multi)
+                                    @foreach ($delivery->lines as $line)
+                                        <div>{{ Amount::format($line->has_out, $gr, false) }}</div>
+                                    @endforeach
+                                    <div class="mt-0.5 border-t border-gold-300 pt-0.5 font-medium">{{ Amount::formatMilli($delivery->hasOutMilli(), $gr, false) }}</div>
+                                @else
+                                    <span class="font-medium">{{ Amount::formatMilli($delivery->hasOutMilli(), $gr, false) }}</span>
+                                @endif
+                            </td>
                             <td class="text-right whitespace-nowrap">
                                 <a href="{{ route('workshop-deliveries.receipt', $delivery) }}" data-print-receipt
                                    class="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium text-stone-500 hover:bg-gold-50 hover:text-gold-800" title="Müşteri fişini yazdır">
