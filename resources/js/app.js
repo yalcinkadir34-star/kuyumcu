@@ -439,3 +439,32 @@ if (typeSelect) {
     typeSelect.addEventListener('change', update);
     update();
 }
+
+// Ekran kilidi (<body data-lock-url data-lock-minutes>, config/kuyumcu.php → kilit_dakika)
+//  - F4: ekranı hemen kilitler
+//  - Belirtilen dakika boyunca fare/klavye kullanılmazsa kilit ekranına geçer
+//  - Sunucu da aynı süreyi kontrol eder (EnsureSessionUnlocked), bu sadece ekranı erken kapatır
+const lockUrl = document.body.dataset.lockUrl;
+
+if (lockUrl) {
+    const lockAfter = Number(document.body.dataset.lockMinutes || 5) * 60 * 1000;
+    const lock = () => window.location.assign(lockUrl);
+    let timer;
+
+    const resetTimer = () => {
+        clearTimeout(timer);
+        timer = setTimeout(lock, lockAfter);
+    };
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'F4' && !event.altKey) {
+            event.preventDefault();
+            lock();
+        }
+    });
+
+    ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'].forEach((name) =>
+        document.addEventListener(name, resetTimer, { passive: true }),
+    );
+    resetTimer();
+}

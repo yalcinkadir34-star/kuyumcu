@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsureSessionUnlocked;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -41,10 +42,8 @@ class LoginController extends Controller
             ]);
         }
 
-        $attempt = Auth::attempt(
-            [...$credentials, 'is_active' => true],
-            $request->boolean('remember'),
-        );
+        // "Beni hatırla" yok: tarayıcı kapanınca oturum biter, boşta kalınca ekran kilitlenir
+        $attempt = Auth::attempt([...$credentials, 'is_active' => true]);
 
         if (! $attempt) {
             RateLimiter::hit($throttleKey);
@@ -56,6 +55,7 @@ class LoginController extends Controller
 
         RateLimiter::clear($throttleKey);
         $request->session()->regenerate();
+        $request->session()->put(EnsureSessionUnlocked::LAST_ACTIVITY, now()->timestamp);
 
         $request->user()->forceFill(['last_login_at' => now()])->save();
 

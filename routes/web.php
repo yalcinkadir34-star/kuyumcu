@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\Auth\LockController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\CashRegisterController;
 use App\Http\Controllers\DashboardController;
@@ -18,8 +20,18 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', 'active'])->group(function () {
-    Route::get('/', DashboardController::class)->name('dashboard');
     Route::post('/cikis', [LoginController::class, 'logout'])->name('logout');
+
+    // Kilit ekranı (kilitliyken de açılabilmeli)
+    Route::get('/kilit', [LockController::class, 'show'])->name('lock.show');
+    Route::post('/kilit', [LockController::class, 'unlock'])->name('lock.unlock');
+});
+
+Route::middleware(['auth', 'active', 'unlocked'])->group(function () {
+    Route::get('/', DashboardController::class)->name('dashboard');
+
+    Route::get('/sifre', [PasswordController::class, 'edit'])->name('password.edit');
+    Route::put('/sifre', [PasswordController::class, 'update'])->name('password.update');
 
     Route::post('/cariler/hizli-ekle', [AccountController::class, 'quickStore'])->name('accounts.quick-store');
     Route::resource('cariler', AccountController::class)

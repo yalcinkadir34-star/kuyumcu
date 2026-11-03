@@ -64,12 +64,6 @@
                                class="block w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-stone-900 shadow-sm outline-none transition focus:border-gold-500 focus:ring-4 focus:ring-gold-500/15">
                     </div>
 
-                    <label class="flex items-center gap-2 text-sm text-stone-600">
-                        <input type="checkbox" name="remember" value="1" @checked(old('remember'))
-                               class="size-4 rounded border-stone-300 accent-gold-600">
-                        Beni hatırla
-                    </label>
-
                     <button type="submit"
                             class="w-full rounded-lg bg-stone-900 px-4 py-2.5 font-medium text-white shadow-sm transition hover:bg-stone-800 focus:outline-none focus:ring-4 focus:ring-gold-500/30">
                         Giriş yap
