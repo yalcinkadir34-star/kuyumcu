@@ -24,7 +24,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Bu kadar dakika hiçbir işlem yapılmazsa ekran kilitlenir ve şifre ister.
-    | Klavyede F4 ya da üst çubuktaki kilit tuşu ekranı hemen kilitler.
+    | Klavyede Esc (ya da F4) veya üst çubuktaki kilit tuşu ekranı hemen kilitler.
     |
     */
 

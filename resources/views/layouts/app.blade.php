@@ -83,9 +83,9 @@
                         </button>
                     </form>
                 @endif
-                <a href="{{ route('lock.show') }}" class="btn btn-secondary py-1.5" title="Ekranı kilitle (klavyede F4)">
+                <a href="{{ route('lock.show') }}" class="btn btn-secondary py-1.5" title="Ekranı kilitle (klavyede Esc)">
                     <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
-                    <span class="hidden md:inline">Kilitle <kbd class="ml-0.5 text-xs text-stone-400">F4</kbd></span>
+                    <span class="hidden md:inline">Kilitle <kbd class="ml-0.5 text-xs text-stone-400">Esc</kbd></span>
                 </a>
                 <a href="{{ route('password.edit') }}" class="hidden text-right hover:opacity-80 sm:block" title="Şifre değiştir">
                     <div class="text-sm font-medium text-stone-900">{{ auth()->user()->name }}</div>

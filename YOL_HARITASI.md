@@ -692,7 +692,7 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Sorun: "Beni hatırla" işaretliyken tarayıcı yıllarca girişli kalıyordu
 - **Kilit ekranı** (`/kilit`): kullanıcının kendi giriş şifresiyle açılır, açılınca kalınan sayfaya dönülür. Ekranda hiçbir veri görünmez. "Farklı kullanıcıyla giriş yap" ile çıkış
   - **5 dakika** hiç işlem yapılmazsa kilitlenir (`KILIT_DAKIKA`, config/kuyumcu.php → `kilit_dakika`). Hem tarayıcıda (fare/klavye) hem sunucuda (`EnsureSessionUnlocked`, `unlocked` middleware) kontrol
-  - **F4** tuşu ya da üst çubuktaki **Kilitle** tuşu ekranı hemen kilitler
+  - **Esc** tuşu (ya da F4) veya üst çubuktaki **Kilitle** tuşu ekranı hemen kilitler. Önce sadece F4 vardı; dizüstünde Fn gerektirdiği için kullanıcı isteğiyle Esc eklendi
   - 5 hatalı denemeden sonra 1 dakika bekletir. Kilitliyken AJAX istekleri 423 döner
 - **"Beni hatırla" kaldırıldı**; `SESSION_EXPIRE_ON_CLOSE=true` (tarayıcı kapanınca çıkış). Eski hatırlama çereziyle açılan oturum da kilit ekranına düşer
 - **Şifre değiştir** (`/sifre`): üst çubukta kullanıcı adına tıklayınca. Mevcut şifre + yeni şifre (en az 4 karakter) + tekrar

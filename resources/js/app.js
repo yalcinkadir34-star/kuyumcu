@@ -441,7 +441,7 @@ if (typeSelect) {
 }
 
 // Ekran kilidi (<body data-lock-url data-lock-minutes>, config/kuyumcu.php → kilit_dakika)
-//  - F4: ekranı hemen kilitler
+//  - Esc (ya da F4): ekranı hemen kilitler
 //  - Belirtilen dakika boyunca fare/klavye kullanılmazsa kilit ekranına geçer
 //  - Sunucu da aynı süreyi kontrol eder (EnsureSessionUnlocked), bu sadece ekranı erken kapatır
 const lockUrl = document.body.dataset.lockUrl;
@@ -457,7 +457,7 @@ if (lockUrl) {
     };
 
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'F4' && !event.altKey) {
+        if ((event.key === 'Escape' && !event.repeat) || (event.key === 'F4' && !event.altKey)) {
             event.preventDefault();
             lock();
         }
