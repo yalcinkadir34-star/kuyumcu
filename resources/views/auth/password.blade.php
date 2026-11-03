@@ -9,25 +9,24 @@
         <form method="POST" action="{{ route('password.update') }}" class="card">
             @csrf
             @method('PUT')
-            <input type="text" name="username" value="{{ auth()->user()->username }}" autocomplete="username" class="hidden" tabindex="-1" aria-hidden="true">
 
             <div class="space-y-5 p-5">
                 <div>
                     <label for="current_password" class="label">Mevcut şifre <span class="text-red-500">*</span></label>
-                    <input id="current_password" name="current_password" type="password" required autofocus autocomplete="current-password"
+                    <input id="current_password" name="current_password" type="text" data-secret spellcheck="false" autocapitalize="off" required autofocus autocomplete="off"
                            class="input @error('current_password') input-error @enderror">
                     @error('current_password') <p class="field-error">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label for="password" class="label">Yeni şifre <span class="text-red-500">*</span></label>
-                    <input id="password" name="password" type="password" required minlength="4" autocomplete="new-password"
+                    <input id="password" name="password" type="text" data-secret spellcheck="false" autocapitalize="off" required minlength="4" autocomplete="off"
                            class="input @error('password') input-error @enderror">
                     @error('password') <p class="field-error">{{ $message }}</p> @enderror
                     <p class="mt-1 text-xs text-stone-500">En az 4 karakter.</p>
                 </div>
                 <div>
                     <label for="password_confirmation" class="label">Yeni şifre (tekrar) <span class="text-red-500">*</span></label>
-                    <input id="password_confirmation" name="password_confirmation" type="password" required autocomplete="new-password" class="input">
+                    <input id="password_confirmation" name="password_confirmation" type="text" data-secret spellcheck="false" autocapitalize="off" required autocomplete="off" class="input">
                 </div>
             </div>
 

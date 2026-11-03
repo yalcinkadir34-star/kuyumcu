@@ -53,14 +53,14 @@
                     <div>
                         <label for="username" class="mb-1.5 block text-sm font-medium text-stone-700">Kullanıcı adı</label>
                         <input id="username" name="username" type="text" value="{{ old('username') }}"
-                               required autofocus autocomplete="username"
+                               required autofocus autocomplete="off"
                                class="block w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-stone-900 shadow-sm outline-none transition focus:border-gold-500 focus:ring-4 focus:ring-gold-500/15">
                     </div>
 
                     <div>
                         <label for="password" class="mb-1.5 block text-sm font-medium text-stone-700">Şifre</label>
-                        <input id="password" name="password" type="password"
-                               required autocomplete="current-password"
+                        <input id="password" name="password" type="text" data-secret spellcheck="false" autocapitalize="off"
+                               required autocomplete="off"
                                class="block w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-stone-900 shadow-sm outline-none transition focus:border-gold-500 focus:ring-4 focus:ring-gold-500/15">
                     </div>
 

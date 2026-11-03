@@ -25,10 +25,9 @@
 
             <form method="POST" action="{{ route('lock.unlock') }}" class="mt-6 space-y-4">
                 @csrf
-                <input type="text" name="username" value="{{ $user->username }}" autocomplete="username" class="hidden" tabindex="-1" aria-hidden="true">
                 <div>
                     <label for="password" class="mb-1.5 block text-sm font-medium text-stone-700">Şifre</label>
-                    <input id="password" name="password" type="password" required autofocus autocomplete="current-password"
+                    <input id="password" name="password" type="text" data-secret spellcheck="false" autocapitalize="off" required autofocus autocomplete="off"
                            class="block w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-stone-900 shadow-sm outline-none transition focus:border-gold-500 focus:ring-4 focus:ring-gold-500/15">
                 </div>
                 <button type="submit"

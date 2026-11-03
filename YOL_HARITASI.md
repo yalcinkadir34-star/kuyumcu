@@ -697,6 +697,7 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - **"Beni hatırla" kaldırıldı**; `SESSION_EXPIRE_ON_CLOSE=true` (tarayıcı kapanınca çıkış). Eski hatırlama çereziyle açılan oturum da kilit ekranına düşer
 - **Şifre değiştir** (`/sifre`): üst çubukta kullanıcı adına tıklayınca. Mevcut şifre + yeni şifre (en az 4 karakter) + tekrar
 - Not: kilitlenince yarım kalmış, kaydedilmemiş form kaybolur (5 dk hiç dokunulmamışsa)
+- **Kullanıcı geri bildirimi:** "Şifreyi kayıt etmişim, otomatik Enter deyince açılıyor" → giriş, kilit ve şifre değiştirme ekranlarındaki şifre kutuları `type="text"` + `data-secret` (CSS `-webkit-text-security: disc`, nokta görünür), `autocomplete="off"`. Chrome bunları şifre alanı saymadığı için ne doldurur ne de kaydetmeyi önerir. Daha önce Chrome'a kaydedilmiş şifreyi kullanıcı Chrome ayarlarından silmeli
 - Testler: 109 test, hepsi geçiyor (`KilitTest` eklendi)
 
 ### 🧪 Deneme carileri
