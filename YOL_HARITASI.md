@@ -63,7 +63,7 @@ sunucuda sadece `git pull` + `composer install` yeterli olur.
 - Kaldırmak: `Unregister-ScheduledTask -TaskName "Kuyumcu Sistem" -Confirm:$false` (yedek için "Kuyumcu Yedek")
 
 ### Yönetici hesabı
-- Kullanıcı adı ve şifre `.env` dosyasında: `ADMIN_USERNAME` / `ADMIN_PASSWORD`
+- Kullanıcı adı ve ilk şifre `.env` dosyasında: `ADMIN_USERNAME` / `ADMIN_PASSWORD` (v0.10.1'den beri girişte sadece şifre sorulur)
 - Hesap `php artisan db:seed` ile oluşturulur (varsa dokunmaz)
 - `.env` git'e **gönderilmez**, şifre sadece yerelde durur
 
@@ -691,7 +691,8 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - **Kullanıcı isteği:** "Programda şifre olsun, her gelen insan işlemleri görüyor" · "Şifreyi ben belirleyeyim" · "Klavyede bir şeye basınca ekran kapansın, şifre istesin"
 - Sorun: "Beni hatırla" işaretliyken tarayıcı yıllarca girişli kalıyordu
 - **Kilit ekranı** (`/kilit`): kullanıcının kendi giriş şifresiyle açılır, açılınca kalınan sayfaya dönülür. Ekranda hiçbir veri görünmez. "Farklı kullanıcıyla giriş yap" ile çıkış
-  - **5 dakika** hiç işlem yapılmazsa kilitlenir (`KILIT_DAKIKA`, config/kuyumcu.php → `kilit_dakika`). Hem tarayıcıda (fare/klavye) hem sunucuda (`EnsureSessionUnlocked`, `unlocked` middleware) kontrol
+  - **2 dakika** hiç işlem yapılmazsa kilitlenir (`KILIT_DAKIKA`, config/kuyumcu.php → `kilit_dakika`; ilk 5 dk idi, kullanıcı isteğiyle 2). Hem tarayıcıda (fare/klavye) hem sunucuda (`EnsureSessionUnlocked`, `unlocked` middleware) kontrol
+  - **Kullanıcı geri bildirimi:** "Niye ekran kilitlenmedi?" → tarayıcıdaki kilit kodu tek bir `setTimeout` idi ve `app.js`'in sonundaydı (önceki kodlardan biri hata verse hiç çalışmazdı; uyku/ekran kapanmasında da zamanlayıcı durabiliyordu). Kilit kodu dosyanın **başına** alındı; süre gerçek saatle 5 sn'de bir, ayrıca sekmeye/pencereye dönüşte ve ilk fare/klavye hareketinde kontrol ediliyor. Geçici bir sayfayla tarayıcıda denendi: boşta kalınca ve Esc ile kilit sayfasına geçiyor ✓
   - **Esc** tuşu (ya da F4) veya üst çubuktaki **Kilitle** tuşu ekranı hemen kilitler. Önce sadece F4 vardı; dizüstünde Fn gerektirdiği için kullanıcı isteğiyle Esc eklendi
   - 5 hatalı denemeden sonra 1 dakika bekletir. Kilitliyken AJAX istekleri 423 döner
 - **"Beni hatırla" kaldırıldı**; `SESSION_EXPIRE_ON_CLOSE=true` (tarayıcı kapanınca çıkış). Eski hatırlama çereziyle açılan oturum da kilit ekranına düşer
@@ -699,6 +700,13 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Not: kilitlenince yarım kalmış, kaydedilmemiş form kaybolur (5 dk hiç dokunulmamışsa)
 - **Kullanıcı geri bildirimi:** "Şifreyi kayıt etmişim, otomatik Enter deyince açılıyor" → giriş, kilit ve şifre değiştirme ekranlarındaki şifre kutuları `type="text"` + `data-secret` (CSS `-webkit-text-security: disc`, nokta görünür), `autocomplete="off"`. Chrome bunları şifre alanı saymadığı için ne doldurur ne de kaydetmeyi önerir. Daha önce Chrome'a kaydedilmiş şifreyi kullanıcı Chrome ayarlarından silmeli
 - Testler: 109 test, hepsi geçiyor (`KilitTest` eklendi)
+
+### ✅ v0.10.1: Girişte kullanıcı adı kaldırıldı, sadece şifre (04.11.2026)
+- **Kullanıcı isteği:** "Kullanıcı adını iptal et, sadece şifre kalsın"
+- Giriş ekranında tek kutu: **Şifre**. Şifre hangi aktif kullanıcıya aitse o giriş yapar (birden fazla tutarsa en eski kullanıcı)
+- `username` sütunu veritabanında duruyor (kullanıcı ayırt etmek ve ileride personel için); sadece girişte sorulmuyor
+- Hatalı deneme sınırı artık IP başına: 5 hatadan sonra 1 dakika bekletir
+- Testler: 110 test, hepsi geçiyor (`AuthTest` sadece şifreyle girişe göre güncellendi)
 
 ### 🧪 Deneme carileri
 - **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir

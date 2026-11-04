@@ -39,7 +39,7 @@
                 </div>
 
                 <h2 class="text-2xl font-semibold text-stone-900">Hoş geldiniz</h2>
-                <p class="mt-1 text-sm text-stone-500">Devam etmek için hesabınıza giriş yapın.</p>
+                <p class="mt-1 text-sm text-stone-500">Devam etmek için şifrenizi girin.</p>
 
                 @if ($errors->any())
                     <div class="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
@@ -51,16 +51,9 @@
                     @csrf
 
                     <div>
-                        <label for="username" class="mb-1.5 block text-sm font-medium text-stone-700">Kullanıcı adı</label>
-                        <input id="username" name="username" type="text" value="{{ old('username') }}"
-                               required autofocus autocomplete="off"
-                               class="block w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-stone-900 shadow-sm outline-none transition focus:border-gold-500 focus:ring-4 focus:ring-gold-500/15">
-                    </div>
-
-                    <div>
                         <label for="password" class="mb-1.5 block text-sm font-medium text-stone-700">Şifre</label>
                         <input id="password" name="password" type="text" data-secret spellcheck="false" autocapitalize="off"
-                               required autocomplete="off"
+                               required autofocus autocomplete="off"
                                class="block w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-stone-900 shadow-sm outline-none transition focus:border-gold-500 focus:ring-4 focus:ring-gold-500/15">
                     </div>
 

@@ -20,7 +20,7 @@ class EnsureUserIsActive
             $request->session()->regenerateToken();
 
             return redirect()->route('login')
-                ->withErrors(['username' => 'Hesabınız pasif durumda. Yöneticinizle görüşün.']);
+                ->withErrors(['password' => 'Hesabınız pasif durumda. Yöneticinizle görüşün.']);
         }
 
         return $next($request);

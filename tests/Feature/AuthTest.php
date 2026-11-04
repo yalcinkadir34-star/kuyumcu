@@ -17,38 +17,49 @@ class AuthTest extends TestCase
 
     public function test_giris_sayfasi_acilir(): void
     {
-        $this->get(route('login'))->assertOk()->assertSee('Giriş yap');
+        $this->get(route('login'))->assertOk()->assertSee('Giriş yap')->assertDontSee('Kullanıcı adı');
     }
 
-    public function test_dogru_bilgilerle_giris_yapilir(): void
+    public function test_dogru_sifreyle_giris_yapilir(): void
     {
-        $user = User::factory()->create(['username' => 'usta']);
+        $user = User::factory()->create();
 
-        $this->post(route('login.attempt'), ['username' => 'usta', 'password' => 'password'])
+        $this->post(route('login.attempt'), ['password' => 'password'])
             ->assertRedirect(route('dashboard'));
 
         $this->assertAuthenticatedAs($user);
         $this->assertNotNull($user->fresh()->last_login_at);
     }
 
+    public function test_sifre_hangi_kullaniciya_aitse_o_giris_yapar(): void
+    {
+        User::factory()->create(['password' => 'birinci']);
+        $ikinci = User::factory()->create(['password' => 'ikinci']);
+
+        $this->post(route('login.attempt'), ['password' => 'ikinci'])
+            ->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticatedAs($ikinci);
+    }
+
     public function test_yanlis_sifre_ile_giris_yapilamaz(): void
     {
-        User::factory()->create(['username' => 'usta']);
+        User::factory()->create();
 
         $this->from(route('login'))
-            ->post(route('login.attempt'), ['username' => 'usta', 'password' => 'yanlis'])
+            ->post(route('login.attempt'), ['password' => 'yanlis'])
             ->assertRedirect(route('login'))
-            ->assertSessionHasErrors('username');
+            ->assertSessionHasErrors('password');
 
         $this->assertGuest();
     }
 
     public function test_pasif_kullanici_giris_yapamaz(): void
     {
-        User::factory()->create(['username' => 'usta', 'is_active' => false]);
+        User::factory()->create(['is_active' => false]);
 
-        $this->post(route('login.attempt'), ['username' => 'usta', 'password' => 'password'])
-            ->assertSessionHasErrors('username');
+        $this->post(route('login.attempt'), ['password' => 'password'])
+            ->assertSessionHasErrors('password');
 
         $this->assertGuest();
     }
@@ -63,14 +74,14 @@ class AuthTest extends TestCase
 
     public function test_bes_hatali_denemeden_sonra_giris_engellenir(): void
     {
-        User::factory()->create(['username' => 'usta']);
+        User::factory()->create();
 
         foreach (range(1, 5) as $i) {
-            $this->post(route('login.attempt'), ['username' => 'usta', 'password' => 'yanlis']);
+            $this->post(route('login.attempt'), ['password' => 'yanlis']);
         }
 
-        $this->post(route('login.attempt'), ['username' => 'usta', 'password' => 'password'])
-            ->assertSessionHasErrors('username');
+        $this->post(route('login.attempt'), ['password' => 'password'])
+            ->assertSessionHasErrors('password');
 
         $this->assertGuest();
     }
