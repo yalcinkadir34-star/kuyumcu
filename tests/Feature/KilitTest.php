@@ -12,24 +12,24 @@ class KilitTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_bes_dakika_bos_kalinca_ekran_kilitlenir(): void
+    public function test_iki_dakika_bos_kalinca_ekran_kilitlenir(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->withSession([EnsureSessionUnlocked::LAST_ACTIVITY => now()->subMinutes(6)->timestamp])
+            ->withSession([EnsureSessionUnlocked::LAST_ACTIVITY => now()->subMinutes(3)->timestamp])
             ->get(route('accounts.index'))
             ->assertRedirect(route('lock.show'));
 
         $this->assertAuthenticatedAs($user);
     }
 
-    public function test_bes_dakikadan_once_kilitlenmez(): void
+    public function test_iki_dakikadan_once_kilitlenmez(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->withSession([EnsureSessionUnlocked::LAST_ACTIVITY => now()->subMinutes(4)->timestamp])
+            ->withSession([EnsureSessionUnlocked::LAST_ACTIVITY => now()->subMinutes(1)->timestamp])
             ->get(route('accounts.index'))
             ->assertOk();
     }

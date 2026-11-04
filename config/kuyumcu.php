@@ -28,7 +28,7 @@ return [
     |
     */
 
-    'kilit_dakika' => (int) env('KILIT_DAKIKA', 5),
+    'kilit_dakika' => (int) env('KILIT_DAKIKA', 2),
 
     /*
     |--------------------------------------------------------------------------
