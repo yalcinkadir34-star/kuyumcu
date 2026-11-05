@@ -708,6 +708,15 @@ değil saat-dakika-saniye sırasına göre görmek istiyorum."
 - Hatalı deneme sınırı artık IP başına: 5 hatadan sonra 1 dakika bekletir
 - Testler: 110 test, hepsi geçiyor (`AuthTest` sadece şifreyle girişe göre güncellendi)
 
+### ✅ v0.11: Şifre tamamen kaldırıldı (05.11.2026)
+- **Kullanıcı isteği:** "Programda şifreyi iptal et" → soruldu, cevap: **tamamen kaldır** (giriş, ekran kilidi, şifre değiştirme)
+- Program açılınca doğrudan ana sayfa gelir: `LogInAutomatically` ara katmanı (`auto-login`) oturum yoksa **ilk aktif kullanıcıyla** (en eski kayıt, şu an `admin`) otomatik giriş yapar. `auth` kontrolünden önce çalışması için öncelik listesine eklendi (`bootstrap/app.php`)
+- Aktif kullanıcı yoksa 503 "Programda aktif kullanıcı yok" der (`php artisan db:seed` ile hesap açılır)
+- Kaldırılanlar: giriş (`/giris`), kilit (`/kilit`), şifre değiştirme (`/sifre`), çıkış (`/cikis`) sayfaları ve tuşları; 2 dk boşta kilitlenme, Esc/F4 kısayolu; `EnsureSessionUnlocked`, `KILIT_DAKIKA` ayarı, `KilitTest`
+- `users` tablosu, roller (yönetici/personel) ve işlemlerde "kim yaptı" kaydı duruyor; ileride şifre geri istenirse v0.10 commit'inden geri alınabilir
+- ⚠️ Masaya gelen herkes programı açabilir (kullanıcı bunu bilerek seçti)
+- Testler: 97 test, hepsi geçiyor (`AuthTest` otomatik girişe göre yeniden yazıldı)
+
 ### 🧪 Deneme carileri
 - **`halit` (C00005, id 6)** ve **`kadir` (C00006, id 7)** kullanıcının **deneme** carileridir
 - **02.10.2026: ikisi de sıfırlandı** (kullanıcı: "deneme olarak halit ve kadir hesabını kullandık, bunları sıfırla").

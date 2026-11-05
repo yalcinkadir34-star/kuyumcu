@@ -1,8 +1,9 @@
 <?php
 
-use App\Http\Middleware\EnsureSessionUnlocked;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Http\Middleware\LogInAutomatically;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,11 +19,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'active' => EnsureUserIsActive::class,
             'admin' => EnsureUserIsAdmin::class,
-            'unlocked' => EnsureSessionUnlocked::class,
+            'auto-login' => LogInAutomatically::class,
         ]);
 
-        $middleware->redirectGuestsTo(fn () => route('login'));
-        $middleware->redirectUsersTo(fn () => route('dashboard'));
+        // Otomatik giriş, oturum kontrolünden (auth) önce çalışmalı
+        $middleware->prependToPriorityList(
+            before: AuthenticatesRequests::class,
+            prepend: LogInAutomatically::class,
+        );
+
+        $middleware->redirectGuestsTo(fn () => route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

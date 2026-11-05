@@ -20,18 +20,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Ekran Kilidi
-    |--------------------------------------------------------------------------
-    |
-    | Bu kadar dakika hiçbir işlem yapılmazsa ekran kilitlenir ve şifre ister.
-    | Klavyede Esc (ya da F4) veya üst çubuktaki kilit tuşu ekranı hemen kilitler.
-    |
-    */
-
-    'kilit_dakika' => (int) env('KILIT_DAKIKA', 2),
-
-    /*
-    |--------------------------------------------------------------------------
     | Firma Bilgileri
     |--------------------------------------------------------------------------
     |

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Oturum açıkken pasif hale getirilen kullanıcıyı sistemden çıkarır.
+ * Oturum açıkken pasif hale getirilen kullanıcıyı çıkarır; sonraki istekte aktif bir kullanıcıyla otomatik giriş yapılır.
  */
 class EnsureUserIsActive
 {
@@ -19,8 +19,7 @@ class EnsureUserIsActive
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')
-                ->withErrors(['password' => 'Hesabınız pasif durumda. Yöneticinizle görüşün.']);
+            return redirect()->route('dashboard');
         }
 
         return $next($request);

@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Enums\TransactionType;
-use App\Http\Middleware\EnsureSessionUnlocked;
 use App\Models\Account;
 use App\Models\CashRegister;
 use App\Models\Currency;
@@ -233,7 +232,6 @@ class CariKasaTest extends TestCase
 
         // Tekrar işaretlemek ilk tarihi değiştirmez
         $this->travel(2)->days();
-        $this->withSession([EnsureSessionUnlocked::LAST_ACTIVITY => now()->timestamp]); // 2 gün sonra ekran kilitli olmasın
         $this->post(route('transactions.reconcile', $hareket));
         $this->assertSame('06.10.2026 14:30', $hareket->fresh()->reconciled_at->format('d.m.Y H:i'));
 

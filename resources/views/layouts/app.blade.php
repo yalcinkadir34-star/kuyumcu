@@ -22,8 +22,7 @@
     <title>@yield('title') · {{ config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-stone-100 font-sans text-stone-800 antialiased print:bg-white"
-      data-lock-url="{{ route('lock.show') }}" data-lock-minutes="{{ config('kuyumcu.kilit_dakika') }}">
+<body class="min-h-screen bg-stone-100 font-sans text-stone-800 antialiased print:bg-white">
     {{-- Mobil menü arka planı --}}
     <div id="sidebar-backdrop" data-sidebar-toggle class="fixed inset-0 z-30 hidden bg-stone-900/50 lg:hidden"></div>
 
@@ -83,23 +82,13 @@
                         </button>
                     </form>
                 @endif
-                <a href="{{ route('lock.show') }}" class="btn btn-secondary py-1.5" title="Ekranı kilitle (klavyede Esc)">
-                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
-                    <span class="hidden md:inline">Kilitle <kbd class="ml-0.5 text-xs text-stone-400">Esc</kbd></span>
-                </a>
-                <a href="{{ route('password.edit') }}" class="hidden text-right hover:opacity-80 sm:block" title="Şifre değiştir">
+                <div class="hidden text-right sm:block">
                     <div class="text-sm font-medium text-stone-900">{{ auth()->user()->name }}</div>
-                    <div class="text-xs text-stone-500">{{ auth()->user()->roleLabel() }} · Şifre değiştir</div>
-                </a>
-                <a href="{{ route('password.edit') }}" class="flex size-9 items-center justify-center rounded-full bg-gold-100 text-sm font-semibold text-gold-800 hover:bg-gold-200" title="Şifre değiştir">
+                    <div class="text-xs text-stone-500">{{ auth()->user()->roleLabel() }}</div>
+                </div>
+                <div class="flex size-9 items-center justify-center rounded-full bg-gold-100 text-sm font-semibold text-gold-800">
                     {{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}
-                </a>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="rounded-lg p-2 text-stone-500 transition hover:bg-stone-100 hover:text-stone-900" title="Çıkış yap" aria-label="Çıkış yap">
-                        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-                    </button>
-                </form>
+                </div>
             </div>
         </header>
 
